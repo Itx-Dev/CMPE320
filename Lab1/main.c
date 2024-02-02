@@ -1,36 +1,56 @@
-#include <string.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-int main(int argc, char *argv[]) {
-    char tempArray[32][32];
-    int occurancesCount[32];
+int main(int argc, char* argv[]) {
+    // Dynamically allocate string array for size of arguments
+    char** usedWords;
+    usedWords = malloc(argc * sizeof(char*));
 
-    // Create array of strings without duplicates
-    int count = 0;
-        
-    for (int currentWord = 0; currentWord < argc; currentWord++) {
-        int occurances = 1;
-        int occuranceIndex = 0;
+    // Allocate space for argc number of elements
+    for (int i = 0; i < argc; i++) {
+        usedWords[i] = malloc(strlen(argv[i]) * sizeof(char));
+    }
 
-        int targetWord;
-        for (targetWord = 0; targetWord < count; targetWord++) {
+    // Assert dynamic string array is not empty
+    assert(usedWords != NULL);
 
-            if (strcmp(argv[currentWord], argv[targetWord]) == 0) {
-                ++occurances;
+    int occurances;
+    int uniqueStrings = 0;
+    int printIndex = 0;
+
+    // Loop over argument array tracking unique strings and counting occurances
+    for (int currentWordIndex = 0; currentWordIndex < argc; currentWordIndex++) {
+        occurances = 0;
+
+        char* currentWord = argv[currentWordIndex];
+
+        for (int usedWordIndex = 0; usedWordIndex < argc; usedWordIndex++) {
+            // If usedWords string at index matches then duplicate and skip.
+            if (strcmp(currentWord, usedWords[usedWordIndex]) == 0 && usedWordIndex != currentWordIndex) {
+                break;
+            }
+            // else if current word does not match and the space in used words is empty, copy to that index 
+            else if (strcmp(usedWords[usedWordIndex], "") == 0) {
+                strcpy(usedWords[usedWordIndex], currentWord);
+                // Keep track of how many strings are unique
+                uniqueStrings++;
                 break;
             }
         }
-        if (targetWord == count) {
-            strcpy(tempArray[count], argv[currentWord]);
-            ++count;
+
+        // Count occurances of each argument
+        for (int targetWordIndex = 0; targetWordIndex < argc; targetWordIndex++) {
+            if ((strcmp(argv[targetWordIndex], currentWord)) == 0) {
+                occurances++;
+            }
         }
 
-        occurancesCount[count - 1] = occurances;
-        printf("%d\n", count);
-    }
-
-    for (int k = 0 ; k < count; k++) {
-        printf("%s: %d\n", tempArray[k], occurancesCount[k]);
+        // Print final output
+        while (strcmp(usedWords[printIndex], "") != 0) {
+            printf("%s: %d\n", usedWords[printIndex], occurances);
+            printIndex++;
+        }
     }
 }
