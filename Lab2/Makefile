@@ -1,16 +1,16 @@
-wish: main.o interactiveMode.o batchMode.o
+wish: main.o processShell.o throwError.o
 	@echo "Compiling wish executable"
-	@gcc main.o interactiveMode.o batchMode.o -o wish
+	@gcc main.o processShell.o throwError.o -o wish
 	@make clean
 
 main.o: main.c
 	@gcc -c main.c
 
-interactiveMode.o: interactiveMode.c
-	@gcc -c interactiveMode.c
+processShell.o: processShell.c
+	@gcc -c processShell.c
 
-batchMode.o: batchMode.c
-	@gcc -c batchMode.c
+throwError.o: throwError.c
+	@gcc -c throwError.c
 
 clean:
 	@echo "Removing object files"
