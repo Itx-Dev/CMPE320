@@ -48,6 +48,7 @@ char** parseStringIntoArray(char *givenLine, char** storageArray) {
 
 int processShell(FILE* fp) {
     char* currentLine = NULL;
+    char* mainDirectory = "/bin";
     size_t lineLength = 0;
     size_t read;
     int index = 0;
@@ -114,23 +115,34 @@ int processShell(FILE* fp) {
         else if (strcmp(command, "path") == 0) {
 
         } else {
+            // Get current working directory
+            char currentDirectory[1024];
+            getcwd(currentDirectory, sizeof(currentDirectory));
 
-        
-            for (int i = 1; i < stringArrayLength; i++) {
-                removeNewLine(stringArray[i]);
-                char* args[] = {command, stringArray[i], NULL};
-                // Check if directory is accessible
-                if (access(stringArray[i], F_OK) == -1) {
-                    fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[i], strerror(errno));
+            if (stringArray[1] == NULL) {
+                stringArray[1] = currentDirectory;
+            }
+
+            // Check if directory is accessible
+            if (access(stringArray[1], F_OK) == -1) {
+                fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[1], strerror(errno));
+            } else {
+                // Fork command process
+                int pid = fork();
+                // Child process
+                if (pid == 0) {
+                    // Combine bin path to executable path
+                    char fullPath[100];
+                    snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory, command);
+
+                    // Define arguments
+                    char *args[] = {fullPath, NULL};
+                    execv(fullPath, args);
                 }
             }
         }
-
-
-        // Print results
-        //index++;
-        //printf("Line %d: %s\n", index, originalString);
     }
+
 }
 
 
