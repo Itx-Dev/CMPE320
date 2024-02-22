@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <errno.h>
 
 #include "error.h"
 
@@ -77,6 +78,12 @@ int processShell(FILE* fp) {
         // Parse Command into string array
         stringArray = parseStringIntoArray(currentLine, stringArray);
 
+        // Find the length of the string array
+        int stringArrayLength = 0;
+        while (stringArray[stringArrayLength] != NULL) {
+            stringArrayLength++;
+        }
+
         // Define command
         char* command = stringArray[0];
 
@@ -87,18 +94,27 @@ int processShell(FILE* fp) {
 
         // If User decides to CD
         else if (strcmp(command, "cd") == 0) {
-            char* command = stringArray[0];
             char* directory[] = {command, stringArray[1], NULL};
             // Check for cd error
             if (execv(command, directory) == -1) {
                 throwError();
+                return -1;
             }
         }
 
         // If User decides to PATH
         else if (strcmp(command, "path") == 0) {
-            exit(0);
+
         } 
+
+        for (int i = 1; i < stringArrayLength; i++) {
+            removeNewLine(stringArray[i]);
+            char* args[] = {command, stringArray[i], NULL};
+            // Check if directory is accessible
+            if (access(stringArray[i], F_OK) == -1) {
+                fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[i], strerror(errno));
+            }
+        }
 
         // Print results
         //index++;
