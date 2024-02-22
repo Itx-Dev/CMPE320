@@ -81,6 +81,8 @@ int processShell(FILE* fp) {
         // Find the length of the string array
         int stringArrayLength = 0;
         while (stringArray[stringArrayLength] != NULL) {
+            // Remove new line char from each element of stringArray
+            removeNewLine(stringArray[stringArrayLength]);
             stringArrayLength++;
         }
 
@@ -94,27 +96,36 @@ int processShell(FILE* fp) {
 
         // If User decides to CD
         else if (strcmp(command, "cd") == 0) {
-            char* directory[] = {command, stringArray[1], NULL};
-            // Check for cd error
-            if (execv(command, directory) == -1) {
+
+            if( chdir( stringArray[1] ) == 0 ) {
+                // This should be empty
+            } 
+            // Test for cd error
+            else {
                 throwError();
                 return -1;
             }
+
+
+
         }
 
         // If User decides to PATH
         else if (strcmp(command, "path") == 0) {
 
-        } 
+        } else {
 
-        for (int i = 1; i < stringArrayLength; i++) {
-            removeNewLine(stringArray[i]);
-            char* args[] = {command, stringArray[i], NULL};
-            // Check if directory is accessible
-            if (access(stringArray[i], F_OK) == -1) {
-                fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[i], strerror(errno));
+        
+            for (int i = 1; i < stringArrayLength; i++) {
+                removeNewLine(stringArray[i]);
+                char* args[] = {command, stringArray[i], NULL};
+                // Check if directory is accessible
+                if (access(stringArray[i], F_OK) == -1) {
+                    fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[i], strerror(errno));
+                }
             }
         }
+
 
         // Print results
         //index++;
