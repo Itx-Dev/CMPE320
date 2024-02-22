@@ -92,7 +92,12 @@ int processShell(FILE* fp) {
 
         // If User decides to Exit
         if (strcmp(command, "exit") == 0){
-            exit(0);
+            // Exit only takes 1 parameter
+            if (stringArrayLength > 1) {
+                throwError();
+            } else {
+                exit(0);
+            }
         }
 
         // If User decides to CD
@@ -128,7 +133,7 @@ int processShell(FILE* fp) {
                 fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[1], strerror(errno));
             } else {
                 // Fork command process
-                int pid = fork();
+                pid_t pid = fork();
                 // Child process
                 if (pid == 0) {
                     // Combine bin path to executable path
@@ -138,6 +143,8 @@ int processShell(FILE* fp) {
                     // Define arguments
                     char *args[] = {fullPath, NULL};
                     execv(fullPath, args);
+                } else {
+                    waitpid(pid, NULL, 0);
                 }
             }
         }
