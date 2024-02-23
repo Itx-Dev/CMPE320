@@ -12,9 +12,18 @@
  * @param string 
  */
 void removeNewLine(char *string) {
-    if (string[strlen(string) - 1] == '\n') {
-        string[strlen(string) - 1] = '\0';
+    size_t length = strlen(string);
+    if (length > 0 && string[length - 1] == '\n') {
+        string[length - 1] = '\0';
     }
+}
+
+char** clearDirectories(char** directory, int amountOfSearchPaths) {
+    // Set entire array to NULL
+    for (int i = 0; i < amountOfSearchPaths; i++) {
+        directory[i] = NULL;
+    }
+    return directory;
 }
 
 /**
@@ -47,11 +56,18 @@ char** parseStringIntoArray(char *givenLine, char** storageArray) {
 }
 
 int processShell(FILE* fp) {
-    char* currentLine = NULL;
-    char* mainDirectory = "/bin";
-    size_t lineLength = 0;
-    size_t read;
     int index = 0;
+    int searchPathCount = 32;
+    char* currentLine = NULL;
+    char** mainDirectory = malloc(searchPathCount * sizeof(char*));
+    size_t lineLength = 0;
+    size_t successfulGetLine;
+
+    // Reset searchPath so only built-in commands work
+    mainDirectory = clearDirectories(mainDirectory, searchPathCount);
+
+    // Set initial path
+    mainDirectory[0] = "/bin";
 
     while (1) {
         // Print prompt only if in batch mode
@@ -60,10 +76,10 @@ int processShell(FILE* fp) {
         }
 
         // Read in current Line
-        read = getline(&currentLine, &lineLength, fp);
+        successfulGetLine = getline(&currentLine, &lineLength, fp);
 
         // If EOF is reached exit
-        if (read == -1) {
+        if (successfulGetLine == -1) {
             exit(0);
         }
         
@@ -77,7 +93,7 @@ int processShell(FILE* fp) {
         char** stringArray = malloc(32 * sizeof(char*));
 
         // Parse Command into string array
-        stringArray = parseStringIntoArray(currentLine, stringArray);
+        stringArray = parseStringIntoArray(originalString, stringArray);
 
         // Find the length of the string array
         int stringArrayLength = 0;
@@ -102,7 +118,6 @@ int processShell(FILE* fp) {
 
         // If User decides to CD
         else if (strcmp(command, "cd") == 0) {
-
             if( chdir( stringArray[1] ) == 0 ) {
                 // This should be empty
             } 
@@ -111,19 +126,34 @@ int processShell(FILE* fp) {
                 throwError();
                 return -1;
             }
-
-
-
         }
 
         // If User decides to PATH
         else if (strcmp(command, "path") == 0) {
+            if (stringArrayLength <= 1) {
+                // Clear Directory and set default path
+                mainDirectory = clearDirectories(mainDirectory, searchPathCount);
+            } else {
+                // Loop entire string array and add provided path to search 
 
-        } else {
+                for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++) {
+                    for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++) {
+                        if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL) {
+                            mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
+                            break;
+                        }
+                    }
+                  }
+            }
+        } 
+
+        // If user types any other command
+        else {
             // Get current working directory
-            char currentDirectory[1024];
+            char currentDirectory[120];
             getcwd(currentDirectory, sizeof(currentDirectory));
 
+            // If no path is given use currentDirectory
             if (stringArray[1] == NULL) {
                 stringArray[1] = currentDirectory;
             }
@@ -132,24 +162,44 @@ int processShell(FILE* fp) {
             if (access(stringArray[1], F_OK) == -1) {
                 fprintf(stderr, "%s: cannot access '%s': %s\n", command, stringArray[1], strerror(errno));
             } else {
+
                 // Fork command process
                 pid_t pid = fork();
+                int fd[2];
+                pipe(fd);
                 // Child process
                 if (pid == 0) {
-                    // Combine bin path to executable path
-                    char fullPath[100];
-                    snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory, command);
+                    // Close writing ends of pipe
+                    close(fd[1]);  
 
-                    // Define arguments
-                    char *args[] = {fullPath, NULL};
-                    execv(fullPath, args);
+                    read(fd[0], mainDirectory, 100);
+
+                    // Combine bin path to executable path
+                    int pathIndex = 0;
+                    while (mainDirectory[pathIndex] != NULL) {
+                        char fullPath[100];
+                        snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory[pathIndex], command);
+                        // Define arguments
+                        char *args[] = {fullPath, NULL};
+                        // execv should not return if it does, error
+                        if (execv(fullPath, args) == -1) {
+                            throwError();
+                        }
+                        pathIndex++;
+                    }
+                    exit(0);
                 } else {
+                    // Close reading and writing end of pipe
                     waitpid(pid, NULL, 0);
                 }
             }
         }
+        free(stringArray);
     }
+    free(currentLine);
+    free(mainDirectory);
 
+    return 0;
 }
 
 
