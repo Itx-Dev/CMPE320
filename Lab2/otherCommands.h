@@ -1,0 +1,1 @@
+void otherCommands(char **stringArray, char *command, char **mainDirectory);
