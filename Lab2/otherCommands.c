@@ -10,13 +10,7 @@
 void otherCommands(char **stringArray, char *command, char **mainDirectory)
 {
     char* currentDirectory = stringArray[1];
-    // If no path is given for ls use currentDirectory
-    if (stringArray[1] == NULL && strcmp(command, "ls") == 0)
-    {
-        getcwd(currentDirectory, sizeof(currentDirectory));
-        stringArray[1] = currentDirectory;
-    }
-
+    
     // Fork command process
     pid_t pid = fork();
 
