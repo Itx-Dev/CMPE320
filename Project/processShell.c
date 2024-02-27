@@ -8,6 +8,13 @@
 #include "processShell.h"
 #include "utilities.h"
 
+/**
+ * @brief Algorithm for any command that is not built into processShell
+ * 
+ * @param stringArray 
+ * @param command 
+ * @param mainDirectory 
+ */
 void otherCommands(char **stringArray, char *command, char **mainDirectory)
 {
     char* currentDirectory = stringArray[1];
@@ -47,6 +54,12 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory)
     }
 }
 
+/**
+ * @brief Main shell loop
+ * 
+ * @param fp 
+ * @return int 
+ */
 int processShell(FILE* fp) {
     int index = 0;
     int searchPathCount = 32;
@@ -77,14 +90,23 @@ int processShell(FILE* fp) {
         
         char* outputPath = NULL;
         char* inputString = NULL;
-
-        if (searchForRedirection(copyForRedirection, &outputPath, &inputString) != -1) {
+        // Returns index of redirection symbol (>)
+        int redirectionFlag = searchForRedirection(copyForRedirection, &outputPath, &inputString);
+        // If redirection returns -1 if error
+        if (redirectionFlag == -1) {
+            throwError();
+            continue;
+        // If redirection symbol is found 
+        } else if (redirectionFlag != 0) {
+            // Open file (creates new file if doesn't exist)
             FILE* redirectionPTR = fopen(outputPath, "w+");
+            // Print output to file
             fprintf(redirectionPTR, "%s", inputString);
-            // Skip to next iteration
             fclose(redirectionPTR);
+            // Free Memory
             redirectionPTR = NULL;
             free(outputPath); free(inputString); free(copyForRedirection);
+            // Skip rest of loop and go to next iteration
             continue;
         }
 

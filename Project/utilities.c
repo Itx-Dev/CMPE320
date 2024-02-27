@@ -48,21 +48,22 @@ int removeNewLine(char* string) {
  * @param outputString, the address of a pointer where to store the value of the string after the (>) symbol
  * @param inputString, the address of a pointer where to store the value of the string before the (>) symbol
  * @param readInLine, the current line read in by the shell
- * @return int, -1 if no (>) symbol found, else the index of the symbol 
+ * @return int, 0 if no (>) symbol found, -1 if error occurs, else the index of the symbol
  */
 int searchForRedirection(char* readInLine, char** outputString, char** inputString) {
     // Remove spaces in line read in
     removeNewLine(readInLine);
     removeSpaces(readInLine);
 
-    int redirectionIndex = -1;
+    int redirectionIndex = 0;
     int redirectionBoolean = 0;
     int outputIndex = 0;
     int inputIndex = 0;
-    char* inputPath = malloc(32 * sizeof(char));
-    char* outputPath = malloc(32 * sizeof(char));
+    char* inputPath = malloc(6 * sizeof(char));
+    char* outputPath = malloc(6 * sizeof(char));
+
     // Find Redirection Symbol
-    for (int i = 0; readInLine[i] <= strlen(readInLine); i++) {
+    for (int i = 0; i <= strlen(readInLine) - 1; i++) {
         // Must stay above > detection
         // Update new string with every character after the redirection symbol
         if (redirectionBoolean == 1) {
@@ -83,17 +84,13 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
         }
     }
 
-    // Add null terminator
-    inputPath[inputIndex] = '\0';
-    outputPath[outputIndex] = '\0';
-
-    if (redirectionBoolean == 1) {
-        if (strlen(inputPath) == 0 || strlen(outputPath) == 0) {
-            throwError();
-            return -1;
-        }
+    if (redirectionBoolean == 1 && strlen(outputPath) == 0) {
+        return -1;
     }
 
+    // Add null terminator
+    // inputPath[inputIndex] = '\0';
+    // outputPath[outputIndex] = '\0';
 
     // Update string passed in through parameter
     *inputString = inputPath;
