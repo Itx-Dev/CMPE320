@@ -10,28 +10,6 @@ int throwError() {
 }
 
 /**
- * @brief Removes spaces in a string
- * 
- * @param readInLine 
- */
-int removeSpaces(char* readInLine) {
-    int noSpaceStringIndex = 0;
-    // Remove spaces in string
-    for (int i = 0; readInLine[i] != '\0'; i++)
-    {
-        // If character is not a space, put character into new string 
-        if (readInLine[i] != ' ')
-        {
-            readInLine[noSpaceStringIndex] = readInLine[i];
-            noSpaceStringIndex++;
-        }    
-    }
-    // Set NULL terminator to end of string
-    readInLine[noSpaceStringIndex] = '\0';
-    return 0;
-}
-
-/**
  * @brief Remove new line character from string.
  * @param string 
  */
@@ -53,52 +31,62 @@ int removeNewLine(char* string) {
 int searchForRedirection(char* readInLine, char** outputString, char** inputString) {
     // Remove spaces in line read in
     removeNewLine(readInLine);
-    removeSpaces(readInLine);
 
     int redirectionIndex = 0;
     int redirectionBoolean = 0;
-    int outputIndex = 0;
-    int inputIndex = 0;
-    char* inputPath = malloc(6 * sizeof(char));
-    char* outputPath = malloc(6 * sizeof(char));
+    int pathIndex = 0;
+    int argIndex = 0;
+    char* input = malloc(32 * sizeof(char));
+    char* output = malloc(32 * sizeof(char));
+    char** outputArguments = malloc(8 * sizeof(char*));
 
     // Find Redirection Symbol
     for (int i = 0; i <= strlen(readInLine) - 1; i++) {
-        // Must stay above > detection
         // Update new string with every character after the redirection symbol
-        if (redirectionBoolean == 1) {
-            outputPath[outputIndex] = readInLine[i];
-            outputIndex++;
-        }
 
         // If redirection symbol found set index and set bool value to true
         if (readInLine[i] == '>') {
             redirectionIndex = i;
+            // Set that (>) was found
             redirectionBoolean = 1;
-        }
-
-        // Store String before (>) Keep after reflection symbol check
-        if (redirectionBoolean == 0) {
-            inputPath[inputIndex] = readInLine[i];
-            inputIndex++;
+            // Reset index to store args after (>) symbol
+            pathIndex = 0;
+        } 
+        // Store command before (>) symbol
+        else if (redirectionBoolean == 0) {
+            // Skip Spaces
+            if (readInLine[i] == ' ') {
+                continue;
+            }
+            // Store string
+            input[pathIndex] = readInLine[i];
+            pathIndex++;
+        } 
+        // Store args after (>) symbol
+        else if (redirectionBoolean == 1) {
+            // If just a space but not argument, skip
+            if (readInLine[i] == ' ' && strlen(output) == 0) {
+                continue;
+            } 
+            // If not empty and a space new argument
+            else if (readInLine[i] == ' ') {
+                outputArguments[argIndex] = output;
+                argIndex++;
+            } 
         }
     }
-
-    if (redirectionBoolean == 1 && strlen(outputPath) == 0) {
+    // If > found but no output given throw error 
+    if (redirectionBoolean == 1 && strlen(output) == 0) {
         return -1;
     }
 
-    // Add null terminator
-    // inputPath[inputIndex] = '\0';
-    // outputPath[outputIndex] = '\0';
-
     // Update string passed in through parameter
-    *inputString = inputPath;
-    *outputString = outputPath;
+    *inputString = input;
+    outputString = outputArguments;
 
     // Free memory
-    inputPath = NULL; outputPath = NULL;
-    free(inputPath); free(outputPath);
+    input = NULL; output = NULL;
+    free(input); free(output);
 
     return redirectionIndex;
 }

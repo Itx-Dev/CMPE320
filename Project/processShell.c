@@ -88,10 +88,10 @@ int processShell(FILE* fp) {
         char* copyForRedirection = (char*)malloc(64 * sizeof(char));
         strcpy(copyForRedirection, currentLine);
         
-        char* outputPath = NULL;
+        char** outputPath = malloc(8 * sizeof(char*));
         char* inputString = NULL;
         // Returns index of redirection symbol (>)
-        int redirectionFlag = searchForRedirection(copyForRedirection, &outputPath, &inputString);
+        int redirectionFlag = searchForRedirection(copyForRedirection, outputPath, &inputString);
         // If redirection returns -1 if error
         if (redirectionFlag == -1) {
             throwError();
@@ -99,13 +99,13 @@ int processShell(FILE* fp) {
         // If redirection symbol is found 
         } else if (redirectionFlag != 0) {
             // Open file (creates new file if doesn't exist)
-            FILE* redirectionPTR = fopen(outputPath, "w+");
+            FILE* redirectionPTR = fopen(outputPath[0], "w+");
             // Print output to file
             fprintf(redirectionPTR, "%s", inputString);
             fclose(redirectionPTR);
             // Free Memory
-            redirectionPTR = NULL;
-            free(outputPath); free(inputString); free(copyForRedirection);
+            redirectionPTR = NULL; outputPath = NULL; inputString = NULL; copyForRedirection = NULL;
+             free(redirectionPTR); free(outputPath); free(inputString); free(copyForRedirection);
             // Skip rest of loop and go to next iteration
             continue;
         }
