@@ -46,6 +46,10 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
         // If redirection symbol found set index and set bool value to true
         if (readInLine[i] == '>') {
             // Set Index of redirection symbols 
+            if (redirectionBoolean == 1) {
+                return -1;
+            }
+
             redirectionIndex = i;
             // Set that (>) was found
             redirectionBoolean = 1;
@@ -62,7 +66,7 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
         else if (redirectionBoolean == 1) {
             // If the first directed output file string ends and there is still more characters
             if (readInLine[i] == ' ' && strlen(output) != 0) {
-                throwError();
+                return -1;
             }
             output[pathIndex] = readInLine[i];
             pathIndex++;
