@@ -38,7 +38,6 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
     int argIndex = 0;
     char* input = malloc(32 * sizeof(char));
     char* output = malloc(32 * sizeof(char));
-    char** outputArguments = malloc(8 * sizeof(char*));
 
     // Find Redirection Symbol
     for (int i = 0; i <= strlen(readInLine) - 1; i++) {
@@ -46,6 +45,7 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
 
         // If redirection symbol found set index and set bool value to true
         if (readInLine[i] == '>') {
+            // Set Index of redirection symbols 
             redirectionIndex = i;
             // Set that (>) was found
             redirectionBoolean = 1;
@@ -54,25 +54,18 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
         } 
         // Store command before (>) symbol
         else if (redirectionBoolean == 0) {
-            // Skip Spaces
-            if (readInLine[i] == ' ') {
-                continue;
-            }
             // Store string
             input[pathIndex] = readInLine[i];
             pathIndex++;
         } 
         // Store args after (>) symbol
         else if (redirectionBoolean == 1) {
-            // If just a space but not argument, skip
-            if (readInLine[i] == ' ' && strlen(output) == 0) {
-                continue;
-            } 
-            // If not empty and a space new argument
-            else if (readInLine[i] == ' ') {
-                outputArguments[argIndex] = output;
-                argIndex++;
-            } 
+            // If the first directed output file string ends and there is still more characters
+            if (readInLine[i] == ' ' && strlen(output) != 0) {
+                throwError();
+            }
+            output[pathIndex] = readInLine[i];
+            pathIndex++;
         }
     }
     // If > found but no output given throw error 
@@ -82,7 +75,7 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
 
     // Update string passed in through parameter
     *inputString = input;
-    outputString = outputArguments;
+    *outputString = output;
 
     // Free memory
     input = NULL; output = NULL;
