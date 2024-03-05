@@ -115,7 +115,7 @@ char** parseStringIntoArray(char *givenLine, char** storageArray) {
     int argumentIndex = 0;
 
     // Split String into tokens by spaces
-    splitString = strtok(givenLine, " ");
+    splitString = strtok(givenLine, " >");
     removeNewLine(splitString);
 
     // Parse string given by user or batch file and split into string array
@@ -125,7 +125,7 @@ char** parseStringIntoArray(char *givenLine, char** storageArray) {
         storageArray[argumentIndex] = splitString;
 
         // Test for NULL pointer
-        splitString = strtok(NULL, " ");
+        splitString = strtok(NULL, " >");
         argumentIndex++;
     }
 

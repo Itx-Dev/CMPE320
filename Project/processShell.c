@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include "processShell.h"
 #include "utilities.h"
@@ -15,7 +16,7 @@
  * @param command 
  * @param mainDirectory 
  */
-void otherCommands(char **stringArray, char *command, char **mainDirectory)
+void otherCommands(char **stringArray, char *command, char **mainDirectory, int redirectionFlag, char* outputPath)
 {
     char* currentDirectory = stringArray[1];
     
@@ -28,6 +29,13 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory)
         // Combine bin path to executable path
         int pathIndex = 0;
         int misses = 0;
+
+
+        if (redirectionFlag != -1 && redirectionFlag != 0) {
+            int outputFile = open(outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            dup2(outputFile, STDOUT_FILENO);
+            close(outputFile);
+        }
         while (mainDirectory[pathIndex] != NULL)
         {
             char fullPath[100];
@@ -96,19 +104,21 @@ int processShell(FILE* fp) {
         if (redirectionFlag == -1) {
             throwError();
             continue;
+        } 
         // If redirection symbol is found 
-        } else if (redirectionFlag != 0) {
-            // Open file (creates new file if doesn't exist)
-            FILE* redirectionPTR = fopen(outputPath, "w+");
-            // Print output to file
-            fprintf(redirectionPTR, "%s", inputString);
-            fclose(redirectionPTR);
-            // Free Memory
-            redirectionPTR = NULL; outputPath = NULL; inputString = NULL; copyForRedirection = NULL;
-             free(redirectionPTR); free(outputPath); free(inputString); free(copyForRedirection);
-            // Skip rest of loop and go to next iteration
-            continue;
-        }
+
+        // else if (redirectionFlag != 0) {
+        //     // Open file (creates new file if doesn't exist)
+        //     FILE* redirectionPTR = fopen(outputPath, "w+");
+        //     // Print output to file
+        //     fprintf(redirectionPTR, "%s", inputString);
+        //     fclose(redirectionPTR);
+        //     // Free Memory
+        //     redirectionPTR = NULL; outputPath = NULL; inputString = NULL; copyForRedirection = NULL;
+        //      free(redirectionPTR); free(outputPath); free(inputString); free(copyForRedirection);
+        //     // Skip rest of loop and go to next iteration
+        //     continue;
+        // }
 
         // Free Memory
         copyForRedirection = NULL; free(copyForRedirection);
@@ -192,7 +202,7 @@ int processShell(FILE* fp) {
 
         // If user types any other command
         else {
-            otherCommands(stringArray, command, mainDirectory);
+            otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath);
         }
         stringArray = NULL;
         free(stringArray);
