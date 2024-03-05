@@ -91,9 +91,13 @@ int processShell(FILE* fp) {
         // Read in current Line
         successfulGetLine = getline(&currentLine, &lineLength, fp);
         removeNewLine(currentLine);
+        // If EOF is reached exit
+        if (successfulGetLine == -1) {
+            exit(0);
+        }
 
-         // Create Space to store original string
-        char* copyForRedirection = (char*)malloc(64 * sizeof(char));
+        // Copy string to new string for manipulation through redirection 
+        char* copyForRedirection = malloc(32 * sizeof(char));
         strcpy(copyForRedirection, currentLine);
         
         char* outputPath = malloc(8 * sizeof(char*));
@@ -104,29 +108,9 @@ int processShell(FILE* fp) {
         if (redirectionFlag == -1) {
             throwError();
             continue;
-        } 
-        // If redirection symbol is found 
-
-        // else if (redirectionFlag != 0) {
-        //     // Open file (creates new file if doesn't exist)
-        //     FILE* redirectionPTR = fopen(outputPath, "w+");
-        //     // Print output to file
-        //     fprintf(redirectionPTR, "%s", inputString);
-        //     fclose(redirectionPTR);
-        //     // Free Memory
-        //     redirectionPTR = NULL; outputPath = NULL; inputString = NULL; copyForRedirection = NULL;
-        //      free(redirectionPTR); free(outputPath); free(inputString); free(copyForRedirection);
-        //     // Skip rest of loop and go to next iteration
-        //     continue;
-        // }
-
+        }
         // Free Memory
         copyForRedirection = NULL; free(copyForRedirection);
-
-        // If EOF is reached exit
-        if (successfulGetLine == -1) {
-            exit(0);
-        }
         
         // Create Space to store original string
         char* originalString = (char*)malloc(lineLength);
@@ -204,8 +188,12 @@ int processShell(FILE* fp) {
         else {
             otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath);
         }
-        stringArray = NULL;
-        free(stringArray);
+        // Free Memory
+        for (int i = 0; i < stringArrayLength; i++) {
+            stringArray[i] = NULL; free(stringArray[i]);
+        }
+        outputPath = NULL; free(outputPath);
+        stringArray = NULL; free(stringArray);
     }
     currentLine = NULL;
     mainDirectory = NULL;
