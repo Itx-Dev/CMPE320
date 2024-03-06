@@ -138,8 +138,14 @@ int processShell(FILE* fp) {
         }
 
         // Define command
-        char* command = stringArray[0];
-
+        char* command = " ";
+        if (stringArray[0] != NULL) {
+            command = stringArray[0];
+        }
+        // if nothing is given try again
+        if (strcmp(command, " ") == 0) {
+            continue;
+        }
         // BUILT IN COMMANDS 
 
         // If User decides to Exit

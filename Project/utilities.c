@@ -116,7 +116,7 @@ char** parseStringIntoArray(char *givenLine, char** storageArray) {
 
     // Split String into tokens by spaces
     splitString = strtok(givenLine, " \t>");
-    removeNewLine(splitString);
+    //removeNewLine(splitString);
 
     // Parse string given by user or batch file and split into string array
     while (splitString != NULL) {
