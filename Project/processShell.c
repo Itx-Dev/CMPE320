@@ -18,11 +18,16 @@
  */
 void otherCommands(char **stringArray, char *command, char **mainDirectory, int redirectionFlag, char* outputPath)
 {
-    char* currentDirectory = stringArray[1];
-    
+    int inputIndex = 0;
+    while (stringArray[inputIndex] != NULL) {
+        if (strcmp(outputPath, stringArray[inputIndex]) == 0) {
+            stringArray[inputIndex] = NULL;
+        }
+        inputIndex++;
+    }
+
     // Fork command process
     pid_t pid = fork();
-
     // Child process
     if (pid == 0)
     {
@@ -31,7 +36,7 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory, int 
         int misses = 0;
 
 
-        if (redirectionFlag != -1 && redirectionFlag != 0) {
+        if (redirectionFlag > 0) {
             int outputFile = open(outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
             dup2(outputFile, STDOUT_FILENO);
             close(outputFile);
@@ -41,9 +46,8 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory, int 
             char fullPath[100];
             snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory[pathIndex], command);
             // Define arguments
-            char *args[] = {command, currentDirectory, NULL};
             // execv should not return if it does, error
-            if (execv(fullPath, args) == -1)
+            if (execv(fullPath, stringArray) == -1)
             {
                 misses++;
             }
@@ -70,7 +74,7 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory, int 
  */
 int processShell(FILE* fp) {
     int index = 0;
-    int searchPathCount = 32;
+    int searchPathCount = 64;
     char* currentLine = NULL;
     char** mainDirectory = malloc(searchPathCount * sizeof(char*));
     size_t lineLength = 0;
@@ -97,11 +101,11 @@ int processShell(FILE* fp) {
         }
 
         // Copy string to new string for manipulation through redirection 
-        char* copyForRedirection = malloc(32 * sizeof(char));
+        char* copyForRedirection = malloc(searchPathCount * sizeof(char));
         strcpy(copyForRedirection, currentLine);
         
-        char* outputPath = malloc(8 * sizeof(char*));
-        char* inputString = NULL;
+        char* outputPath = malloc(searchPathCount * sizeof(char*));
+        char* inputString = malloc(searchPathCount * sizeof(char*));
         // Returns index of redirection symbol (>)
         int redirectionFlag = searchForRedirection(copyForRedirection, &outputPath, &inputString);
         // If redirection returns -1 if error
@@ -113,11 +117,11 @@ int processShell(FILE* fp) {
         copyForRedirection = NULL; free(copyForRedirection);
         
         // Create Space to store original string
-        char* originalString = (char*)malloc(lineLength);
+        char* originalString = malloc(searchPathCount * sizeof(char));
         strcpy(originalString, currentLine);
 
         // Create Space to store command
-        char** stringArray = malloc(32 * sizeof(char*));
+        char** stringArray = malloc(searchPathCount * sizeof(char*));
 
         // Parse Command into string array
         stringArray = parseStringIntoArray(originalString, stringArray);

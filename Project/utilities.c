@@ -111,11 +111,11 @@ char** clearDirectories(char** directory, int amountOfSearchPaths) {
  * @return char** Array of Strings with current line
  */
 char** parseStringIntoArray(char *givenLine, char** storageArray) {
-    char* splitString = NULL;
+    char* splitString = malloc(32 * sizeof(char));
     int argumentIndex = 0;
 
     // Split String into tokens by spaces
-    splitString = strtok(givenLine, " >");
+    splitString = strtok(givenLine, " \t>");
     removeNewLine(splitString);
 
     // Parse string given by user or batch file and split into string array
@@ -125,7 +125,7 @@ char** parseStringIntoArray(char *givenLine, char** storageArray) {
         storageArray[argumentIndex] = splitString;
 
         // Test for NULL pointer
-        splitString = strtok(NULL, " >");
+        splitString = strtok(NULL, " \t>");
         argumentIndex++;
     }
 

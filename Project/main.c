@@ -18,7 +18,7 @@ int main(int argc, char* args[]) {
             throwError();
             exit(1);
         }
-
+ 
     } else if (argc <= 1) {
         fp = stdin;
     } else {
