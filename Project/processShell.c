@@ -171,24 +171,17 @@ int processShell(FILE* fp) {
 
         // If User decides to PATH
         else if (strcmp(command, "path") == 0) {
-            if (stringArrayLength <= 1)
-            {
-                // Clear Directory and set default path
-                mainDirectory = clearDirectories(mainDirectory, searchPathCount);
-            }
-            else
-            {
-                // Loop entire string array and add provided path to search
+            mainDirectory = clearDirectories(mainDirectory, searchPathCount);
+            // Loop entire string array and add provided path to search
 
-                for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++)
+            for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++)
+            {
+                for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++)
                 {
-                    for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++)
+                    if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL)
                     {
-                        if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL)
-                        {
-                            mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
-                            break;
-                        }
+                        mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
+                        break;
                     }
                 }
             }
