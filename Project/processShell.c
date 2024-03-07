@@ -19,6 +19,7 @@
 void otherCommands(char **stringArray, char *command, char **mainDirectory, int redirectionFlag, char* outputPath)
 {
     int inputIndex = 0;
+    // Discard output path from string array 
     while (stringArray[inputIndex] != NULL) {
         if (strcmp(outputPath, stringArray[inputIndex]) == 0) {
             stringArray[inputIndex] = NULL;
@@ -26,44 +27,50 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory, int 
         inputIndex++;
     }
 
-    // Fork command process
-    pid_t pid = fork();
-    // Child process
-    if (pid == 0)
-    {
-        // Combine bin path to executable path
-        int pathIndex = 0;
-        int misses = 0;
+    int pathIndex = 0;
+    int misses = 0;
 
-
-        if (redirectionFlag > 0) {
-            int outputFile = open(outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            dup2(outputFile, STDOUT_FILENO);
-            close(outputFile);
-        }
-        while (mainDirectory[pathIndex] != NULL)
-        {
-            char fullPath[100];
-            snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory[pathIndex], command);
-            // Define arguments
-            // execv should not return if it does, error
-            if (execv(fullPath, stringArray) == -1)
-            {
-                misses++;
-            }
-            pathIndex++;
-        }
-        // If all directories fail throw error
-        if (misses == pathIndex)
-        {
-            throwError();
-        }
-        exit(0);
+    // Redirect output to file defined by user
+    if (redirectionFlag > 0) {
+        int outputFile = open(outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        dup2(outputFile, STDOUT_FILENO);
+        close(outputFile);
     }
-    else
+    while (mainDirectory[pathIndex] != NULL)
     {
-        waitpid(pid, NULL, 0);
+        char fullPath[100];
+        snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory[pathIndex], command);
+        // Define arguments
+        // execv should not return if it does, error
+        if (execv(fullPath, stringArray) == -1)
+        {
+            misses++;
+        }
+        pathIndex++;
     }
+    // If all directories fail throw error
+    if (misses == pathIndex)
+    {
+        throwError();
+    }
+    exit(0);
+}
+
+/**
+ * @brief Find how many strings are in a string array
+ * 
+ * @param stringArray 
+ * @return int 
+ */
+int findStringArrayLength(char** stringArray) {
+    // Find the length of the string array
+    int stringArrayLength = 0;
+    while (stringArray[stringArrayLength] != NULL) {
+        // Remove new line char from each element of stringArray
+        removeNewLine(stringArray[stringArrayLength]);
+        stringArrayLength++;
+    }
+    return stringArrayLength;
 }
 
 /**
@@ -100,42 +107,29 @@ int processShell(FILE* fp) {
             exit(0);
         }
 
-        // Copy string to new string for manipulation through redirection 
-        char* copyForRedirection = malloc(searchPathCount * sizeof(char));
-        strcpy(copyForRedirection, currentLine);
+        // make a copy of the line
+        char* originalString = malloc(searchPathCount * sizeof(char));
+        strcpy(originalString, currentLine);
         
         char* outputPath = malloc(searchPathCount * sizeof(char*));
         char* inputString = malloc(searchPathCount * sizeof(char*));
         // Returns index of redirection symbol (>)
-        int redirectionFlag = searchForRedirection(copyForRedirection, &outputPath, &inputString);
+        int redirectionFlag = searchForRedirection(originalString, &outputPath, &inputString);
         // If redirection returns -1 if error
         if (redirectionFlag == -1) {
             throwError();
             continue;
         }
-        // Free Memory
-        copyForRedirection = NULL; free(copyForRedirection);
-        
-        // Create Space to store original string
-        char* originalString = malloc(searchPathCount * sizeof(char));
-        strcpy(originalString, currentLine);
 
-        // Create Space to store command
+        // Parse String into a string array
         char** stringArray = malloc(searchPathCount * sizeof(char*));
-
-        // Parse Command into string array
         stringArray = parseStringIntoArray(originalString, stringArray);
 
         // Free Memory
         originalString = NULL; free(originalString);
 
-        // Find the length of the string array
-        int stringArrayLength = 0;
-        while (stringArray[stringArrayLength] != NULL) {
-            // Remove new line char from each element of stringArray
-            removeNewLine(stringArray[stringArrayLength]);
-            stringArrayLength++;
-        }
+        // Find number of strings in string array
+        int stringArrayLength = findStringArrayLength(stringArray);
 
         // Define command
         char* command = " ";
@@ -189,7 +183,12 @@ int processShell(FILE* fp) {
 
         // If user types any other command
         else {
-            otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath);
+            pid_t pid = fork();
+            if (pid == 0) {
+                otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath);
+            } else {
+                waitpid(pid, NULL, 0);
+            }
         }
         // Free Memory
         for (int i = 0; i < stringArrayLength; i++) {
