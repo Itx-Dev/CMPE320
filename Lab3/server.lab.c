@@ -4,7 +4,6 @@
 #include <unistd.h> //close()
 
 #include <sys/socket.h> // socket(), connect(), send(), recv()
-#include <sys/wait.h>
 #include <arpa/inet.h> // sockaddr_in, inet_addr()
 
 #define BUFSIZE 64
@@ -29,11 +28,10 @@ void handle(int sock) {
         if (send(sock, buffer, size, 0) != size) {
             die("send() failed");
         }
-        if ((size == recv(sock, buffer, BUFSIZE, 0)) < 0) {
+        if ((size = recv(sock, buffer, BUFSIZE, 0)) < 0) {
             die("recv() failed");
         }
     }
-
     close(sock);
 }
 
