@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 
 int throwError() {
     char error_message[30] = "An error has occurred\n";
@@ -19,6 +22,48 @@ int removeNewLine(char* string) {
         string[length - 1] = '\0';
     }
     return 0;
+}
+
+int runParallelCommands(char* readInLine) {
+    int ampersandCount = 0;
+    int commandIndex = 0;
+
+    // Look for ampersand
+    for (int i = 0; i < strlen(readInLine); i++) {
+        if (readInLine[i] == '&') {
+            if (i == 0) {
+                return -1;
+            } else {
+                ampersandCount++;
+            }
+        }
+    }
+    // If no ampersand found return 0
+    if (ampersandCount == 0) {
+        return 0;
+    }
+
+    // String array to store each command and arguments in
+    char** parallelStringArray = malloc(32 * sizeof(char*));
+
+    // Split line by &
+    if (ampersandCount > 0) {
+        char* parallelCommand = strtok(readInLine, "&");
+        printf("Parallel Command: %s", parallelCommand);
+        while (parallelCommand != NULL) {
+            parallelStringArray[commandIndex] = parallelCommand;
+            commandIndex++;
+            parallelCommand = strtok(NULL, "&");
+        }
+    }
+
+    // Loop 1 more than ampersandCount
+    for (int i = 0; i < ampersandCount + 1; i++) {
+       printf("%s\n", parallelStringArray[i]);
+    } 
+
+    return 0;
+
 }
 
 /**

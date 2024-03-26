@@ -101,15 +101,22 @@ int processShell(FILE* fp) {
 
         // Read in current Line
         successfulGetLine = getline(&currentLine, &lineLength, fp);
+
+        // Handle Empty Input
+        if (strcmp(currentLine, "\n") == 0) { continue; }
+
         removeNewLine(currentLine);
         // If EOF is reached exit
-        if (successfulGetLine == -1) {
-            exit(0);
-        }
+        if (successfulGetLine == -1) { exit(0); }
+
 
         // make a copy of the line
         char* originalString = malloc(searchPathCount * sizeof(char));
         strcpy(originalString, currentLine);
+
+        // Test for parallel Commands
+        int parallelCommandsFlag = runParallelCommands(originalString);
+        if (parallelCommandsFlag == -1) { continue; }
         
         char* outputPath = malloc(searchPathCount * sizeof(char*));
         char* inputString = malloc(searchPathCount * sizeof(char*));
@@ -137,7 +144,7 @@ int processShell(FILE* fp) {
             command = stringArray[0];
         }
         // if nothing is given try again
-        if (strcmp(command, " ") == 0) {
+        if (strcmp(command, " ") == 0 ) {
             continue;
         }
         // BUILT IN COMMANDS 
