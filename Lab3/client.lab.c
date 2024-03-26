@@ -15,7 +15,6 @@ void die(char *msg) {
 
 
 int main(int argc, char *argv[]) {
-
     if (argc != 4) {
         fprintf(stderr, "Usage: %s <server ip> <port num> <message>", argv[0]);
         exit(1);
