@@ -6,33 +6,14 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
+/**
+ * @brief Throw error message
+ * 
+ * @return int 
+ */
 int throwError() {
   char error_message[30] = "An error has occurred\n";
   write(STDERR_FILENO, error_message, strlen(error_message));
-}
-
-/**
- * @brief Break given command down into an array of strings and return the array of strings
- *
- * @param givenLine
- * @param storageArray
- * @return char** Array of Strings with current line
- */
-char **parseStringIntoArray(char *givenLine, char **storageArray) {
-  char *splitString = malloc(32 * sizeof(char));
-  int argumentIndex = 0;
-
-  splitString = strtok(givenLine, " \t>");  // Split String into tokens by spaces
-
-  // Parse string given by user or batch file and split into string array
-  while (splitString != NULL) {
-    storageArray[argumentIndex] = splitString;    // Store split string into a string array
-
-    splitString = strtok(NULL, " \t>");    // Test for NULL pointer
-    argumentIndex++;
-  }
-
-  return storageArray;
 }
 
 /**
@@ -45,8 +26,12 @@ int removeNewLine(char *string) {
   return 0;
 }
 
-// Function to remove trailing spaces from a string
-void removeTrailingSpaces(char *str) {
+/**
+ * @brief Remove spaces that appear only at the end of the string
+ * 
+ * @param str 
+ */
+int removeTrailingSpaces(char *str) {
   int i;
   // Find the index of the last non-space character
   for (i = strlen(str) - 1; i >= 0; i--) {
@@ -55,35 +40,41 @@ void removeTrailingSpaces(char *str) {
   str[i + 1] = '\0';  // Null-terminate the string at the last non-space character
 }
 
-// Function to remove spaces from a string
-void removeSpaces(char *str) {
+/**
+ * @brief Remove Spaces from string
+ * 
+ * @param str 
+ * @return int 
+ */
+int removeSpaces(char *str) {
   int i, j = 0;
-
   // Iterate through the string
-  for (i = 0; i < strlen(str); i++) {
-    // If the current character is not a space, copy it to the new position
-    if (str[i] != ' ') { str[j++] = str[i]; }
+  for (i = 0; i < strlen(str); i++) {  
+    if (str[i] != ' ') { str[j++] = str[i]; }    // If the current character is not a space, copy it to the new position
   }
   str[j] = '\0';  // Null-terminate the string at the new position
+  return 0;
 }
 
-int searchForParallelCommands(char *readInLine) {
-  int ampersandCount = 0, commandIndex = 0;
-  // Look for ampersand
-  for (int i = 0; i < strlen(readInLine); i++) {
-    if (readInLine[i] == '&') {
-      if (i == 0) { return -1; } // if string starts with ampersand return error code
-      else { ampersandCount++; } // else increment ampersand counter
-    }
+/**
+ * @brief Test if the input is only spaces
+ * 
+ * @param input 
+ * @return int 
+ */
+int testBlankInput(char *input) {
+  while (*input != '\n') {
+      if (*input != ' ') {
+          return 0;
+      }
+      input++;
   }
-
-
-  if (ampersandCount == 0) { return 0; }  // return 0 if ampersand is not found
-  else if (ampersandCount > 0) { return 1; } // return 1 if ampersand is found
+  return 1;
 }
 
 /**
  * @brief Searches for redirection symbol (>)
+ * 
  * @param outputString, the address of a pointer where to store the value of the string after the (>) symbol
  * @param inputString, the address of a pointer where to store the value of the string before the (>) symbol
  * @param readInLine, the current line read in by the shell
@@ -127,6 +118,25 @@ int searchForRedirection(char *readInLine, char **outputString, char **inputStri
 }
 
 /**
+ * @brief Search for ampersand in line, indicating parallel commands
+ * 
+ * @param readInLine 
+ * @return int 
+ */
+int searchForParallelCommands(char *readInLine) {
+  int ampersandCount = 0, commandIndex = 0;
+  // Look for ampersand
+  for (int i = 0; i < strlen(readInLine); i++) {
+    if (readInLine[i] == '&') {
+      if (i == 0) { return -1; } // if string starts with ampersand return error code
+      else { ampersandCount++; } // else increment ampersand counter
+    }
+  }
+  if (ampersandCount == 0) { return 0; }  // return 0 if ampersand is not found
+  else if (ampersandCount > 0) { return 1; } // return 1 if ampersand is found
+}
+
+/**
  * @brief Replace every string in string array with NULL
  *
  * @param directory
@@ -137,4 +147,26 @@ char **clearDirectories(char **directory, int amountOfSearchPaths) {
   // Set entire array to NULL
   for (int i = 0; i < amountOfSearchPaths; i++) { directory[i] = NULL; }
   return directory;
+}
+
+/**
+ * @brief Break given command down into an array of strings and return the array of strings
+ *
+ * @param givenLine
+ * @param storageArray
+ * @return char** Array of Strings with current line
+ */
+char **parseStringIntoArray(char *givenLine, char **storageArray) {
+  char *splitString = malloc(32 * sizeof(char));
+  int argumentIndex = 0;
+
+  splitString = strtok(givenLine, " \t>");  // Split String into tokens by spaces
+  // Parse string given by user or batch file and split into string array
+  while (splitString != NULL) {
+    storageArray[argumentIndex] = splitString;    // Store split string into a string array
+
+    splitString = strtok(NULL, " \t>");    // Test for NULL pointer
+    argumentIndex++;
+  }
+  return storageArray;
 }

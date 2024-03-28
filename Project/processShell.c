@@ -53,22 +53,38 @@ void otherCommands(char **stringArray, char *command, char **mainDirectory, int 
 }
 
 /**
- * @brief Find how many strings are in a string array
- *
- * @param stringArray
+ * @brief Main shell loop
+ * @param fp
  * @return int
  */
-int findStringArrayLength(char **stringArray) {
-  // Find the length of the string array
-  int stringArrayLength = 0;
-  while (stringArray[stringArrayLength] != NULL) {
-    // Remove new line char from each element of stringArray
-    removeNewLine(stringArray[stringArrayLength]);
-    stringArrayLength++;
+int processShell(FILE *fp) {
+  int searchPathCount = 64;
+  char *currentLine = NULL;
+  char **mainDirectory = malloc(searchPathCount * sizeof(char *));
+  size_t lineLength = 0, successfulGetLine;
+  mainDirectory = clearDirectories(mainDirectory, searchPathCount);  // Reset searchPath so only built-in commands work
+  mainDirectory[0] = "/bin";  // Set initial path
+  while (1) {
+    if (fp == stdin) { printf("wish> "); }     // Print prompt only if in batch mode
+    successfulGetLine = getline(&currentLine, &lineLength, fp);    // Read in current Line
+    if (successfulGetLine == -1) { exit(0); }     // If EOF is reached exit
+    if (testBlankInput(currentLine) == 1) { continue; } // Handle Blank Input
+    int parallelCommandsFlag = searchForParallelCommands(currentLine);    // Test for parallel Commands
+    if (parallelCommandsFlag == -1) { return -1; } // Test if error with parallel format
+    if (parallelCommandsFlag == 1) { runParallelCommands(currentLine, mainDirectory); } // Run Parallel Commands
+    else { runCommand(currentLine, mainDirectory); } // Run Command normally if not parallel
   }
-  return stringArrayLength;
+  currentLine = NULL; free(currentLine); mainDirectory = NULL; free(mainDirectory); // Free Memory
+  return 0;
 }
 
+/**
+ * @brief Run command through processes
+ * 
+ * @param givenLine 
+ * @param mainDirectory 
+ * @return int 
+ */
 int runCommand(char *givenLine, char **mainDirectory) {
   int searchPathCount = 64; // Define search path count for main directory
   char *originalString = malloc(searchPathCount * sizeof(char));
@@ -93,15 +109,7 @@ int runCommand(char *givenLine, char **mainDirectory) {
   }
   else if (strcmp(command, "path") == 0) {  // If User decides to PATH
     mainDirectory = clearDirectories(mainDirectory, searchPathCount); // Clear Directory
-    // Loop entire string array and add provided path to search
-    for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++) {
-      for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++) {
-        if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL) {
-          mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
-          break;
-        }
-      }
-    }
+    addPaths(stringArray, mainDirectory, stringArrayLength, searchPathCount); // Add paths to directory
   }
   // If user types any other command
   else {
@@ -113,62 +121,70 @@ int runCommand(char *givenLine, char **mainDirectory) {
   outputPath = NULL; free(outputPath); stringArray = NULL; free(stringArray); // Free Memory
 }
 
-int testBlankInput(const char *input) {
-    while (*input != '\n') {
-        if (*input != ' ') {
-            return 0;
-        }
-        input++;
-    }
-    return 1;
+/**
+ * @brief Find how many strings are in a string array
+ *
+ * @param stringArray
+ * @return int
+ */
+int findStringArrayLength(char **stringArray) {
+  // Find the length of the string array
+  int stringArrayLength = 0;
+  while (stringArray[stringArrayLength] != NULL) {
+    // Remove new line char from each element of stringArray
+    removeNewLine(stringArray[stringArrayLength]);
+    stringArrayLength++;
+  }
+  return stringArrayLength;
 }
 
 /**
- * @brief Main shell loop
- * @param fp
- * @return int
+ * @brief Add Paths to main directory
+ * 
+ * @param stringArray 
+ * @param mainDirectory 
+ * @param stringArrayLength 
+ * @param searchPathCount 
+ * @return int 
  */
-int processShell(FILE *fp) {
-  int searchPathCount = 64;
-  char *currentLine = NULL;
-  char **mainDirectory = malloc(searchPathCount * sizeof(char *));
-  size_t lineLength = 0, successfulGetLine;
-  mainDirectory = clearDirectories(mainDirectory, searchPathCount);  // Reset searchPath so only built-in commands work
-  mainDirectory[0] = "/bin";  // Set initial path
-  while (1) {
-    if (fp == stdin) { printf("wish> "); }     // Print prompt only if in batch mode
-    successfulGetLine = getline(&currentLine, &lineLength, fp);    // Read in current Line
-    if (successfulGetLine == -1) { exit(0); }     // If EOF is reached exit
-    if (testBlankInput(currentLine) == 1) { continue; } // Handle Blank Input
-
-    int parallelCommandsFlag = searchForParallelCommands(currentLine);    // Test for parallel Commands
-    if (parallelCommandsFlag == -1) { return -1; }
-    if (parallelCommandsFlag == 1) {
-      char **parallelStringArray = malloc(32 * sizeof(char *));
-      int commandIndex = 0;
-      char *parallelCommand = strtok(currentLine, "&");       // Split line by &
-      while (parallelCommand != NULL) {
-        parallelStringArray[commandIndex] = parallelCommand;
-        commandIndex++;
-        parallelCommand = strtok(NULL, "&");
+int addPaths(char** stringArray, char** mainDirectory, int stringArrayLength, int searchPathCount) {
+  // Loop entire string array and add provided path to search
+  for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++) {
+    for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++) {
+      if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL) {
+        mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
+        break;
       }
-      for (int i = 0; i < commandIndex; i++) {
-        pid_t pid = fork();
-        if (pid == 0) {
-          runCommand(parallelStringArray[i], mainDirectory);
-          exit(0);
-        }
-        else if (pid < 0) {
-          throwError();
-          exit(1);
-        }
-      }
-      for (int i = 0; i < 3; i++) { wait(NULL); } // have parent wait for children
-    }
-    else {
-      runCommand(currentLine, mainDirectory);
     }
   }
-  currentLine = NULL; free(currentLine); mainDirectory = NULL; free(mainDirectory); // Free Memory
-  return 0;
+}
+
+/**
+ * @brief Run parallel commands given a line with parallel commands and the main directory
+ * 
+ * @param currentLine 
+ * @param mainDirectory 
+ * @return int 
+ */
+int runParallelCommands(char* currentLine, char** mainDirectory) {
+  char **parallelStringArray = malloc(32 * sizeof(char *));
+  int commandIndex = 0;
+  char *parallelCommand = strtok(currentLine, "&");       // Split line by &
+  while (parallelCommand != NULL) {
+    parallelStringArray[commandIndex] = parallelCommand;
+    commandIndex++;
+    parallelCommand = strtok(NULL, "&");
+  }
+  for (int i = 0; i < commandIndex; i++) {
+    pid_t pid = fork();
+    if (pid == 0) {
+      runCommand(parallelStringArray[i], mainDirectory);
+      exit(0);
+    }
+    else if (pid < 0) {
+      throwError();
+      exit(1);
+    }
+  }
+  for (int i = 0; i < 3; i++) { wait(NULL); } // have parent wait for children
 }
