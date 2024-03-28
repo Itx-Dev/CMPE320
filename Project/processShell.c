@@ -83,26 +83,20 @@ int runCommand(char *givenLine, char **mainDirectory) {
   char *command = " ";  // Define command
   if (stringArray[0] != NULL) { command = stringArray[0]; } // Define Command
   if (strcmp(command, " ") == 0) { return -1; }  // if nothing is given try again
-  if (strcmp(command, "exit") == 0)  // If User decides to Exit
-  {
+  if (strcmp(command, "exit") == 0) {     // If user exits
     if (stringArrayLength > 1) { throwError(); }  // Exit only takes 1 parameter
     else { exit(0); }
   }
-  else if (strcmp(command, "cd") == 0)  // If User decides to CD
-  {
+  else if (strcmp(command, "cd") == 0) {  // If User decides to CD
     if (chdir(stringArray[1]) == 0) { } // This should be empty
     else { throwError(); } // Test for cd error
   }
-  else if (strcmp(command, "path") == 0)  // If User decides to PATH
-  {
+  else if (strcmp(command, "path") == 0) {  // If User decides to PATH
     mainDirectory = clearDirectories(mainDirectory, searchPathCount); // Clear Directory
     // Loop entire string array and add provided path to search
-    for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++)
-    {
-      for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++)
-      {
-        if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL)
-        {
+    for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++) {
+      for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++) {
+        if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL) {
           mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
           break;
         }
@@ -111,7 +105,6 @@ int runCommand(char *givenLine, char **mainDirectory) {
   }
   // If user types any other command
   else {
-    for (int i = 0; i < stringArrayLength; i++) { removeTrailingSpaces(stringArray[i]); }   // Remove spaces in string array
     pid_t pid = fork();
     if (pid == 0) { otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath); } // Child Performs
     else { waitpid(pid, NULL, 0); } // Parent Performs
@@ -120,8 +113,17 @@ int runCommand(char *givenLine, char **mainDirectory) {
   outputPath = NULL; free(outputPath); stringArray = NULL; free(stringArray); // Free Memory
 }
 
+int testBlankInput(const char *input) {
+    while (*input != '\n') {
+        if (*input != ' ') {
+            return 0;
+        }
+        input++;
+    }
+    return 1;
+}
+
 /**
- * 49 Lines
  * @brief Main shell loop
  * @param fp
  * @return int
@@ -136,11 +138,8 @@ int processShell(FILE *fp) {
   while (1) {
     if (fp == stdin) { printf("wish> "); }     // Print prompt only if in batch mode
     successfulGetLine = getline(&currentLine, &lineLength, fp);    // Read in current Line
-    if (strcmp(currentLine, "\n") == 0) { continue; }     // Handle Empty Input
-    removeNewLine(currentLine);
     if (successfulGetLine == -1) { exit(0); }     // If EOF is reached exit
-    char *copyLine = malloc(searchPathCount * sizeof(char));
-    strcpy(copyLine, currentLine);
+    if (testBlankInput(currentLine) == 1) { continue; } // Handle Blank Input
 
     int parallelCommandsFlag = searchForParallelCommands(currentLine);    // Test for parallel Commands
     if (parallelCommandsFlag == -1) { return -1; }
@@ -154,7 +153,6 @@ int processShell(FILE *fp) {
         parallelCommand = strtok(NULL, "&");
       }
       for (int i = 0; i < commandIndex; i++) {
-        removeTrailingSpaces(parallelStringArray[i]);
         pid_t pid = fork();
         if (pid == 0) {
           runCommand(parallelStringArray[i], mainDirectory);
@@ -168,8 +166,7 @@ int processShell(FILE *fp) {
       for (int i = 0; i < 3; i++) { wait(NULL); } // have parent wait for children
     }
     else {
-      removeTrailingSpaces(copyLine);
-      runCommand(copyLine, mainDirectory);
+      runCommand(currentLine, mainDirectory);
     }
   }
   currentLine = NULL; free(currentLine); mainDirectory = NULL; free(mainDirectory); // Free Memory

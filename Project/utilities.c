@@ -22,17 +22,13 @@ char **parseStringIntoArray(char *givenLine, char **storageArray) {
   char *splitString = malloc(32 * sizeof(char));
   int argumentIndex = 0;
 
-  // Split String into tokens by spaces
-  splitString = strtok(givenLine, " \t>");
+  splitString = strtok(givenLine, " \t>");  // Split String into tokens by spaces
 
   // Parse string given by user or batch file and split into string array
   while (splitString != NULL) {
+    storageArray[argumentIndex] = splitString;    // Store split string into a string array
 
-    // Store split string into a string array
-    storageArray[argumentIndex] = splitString;
-
-    // Test for NULL pointer
-    splitString = strtok(NULL, " \t>");
+    splitString = strtok(NULL, " \t>");    // Test for NULL pointer
     argumentIndex++;
   }
 
@@ -45,67 +41,45 @@ char **parseStringIntoArray(char *givenLine, char **storageArray) {
  */
 int removeNewLine(char *string) {
   size_t length = strlen(string);
-  if (length > 0 && string[length - 1] == '\n') {
-    string[length - 1] = '\0';
-  }
+  if (length > 0 && string[length - 1] == '\n') { string[length - 1] = '\0'; }
   return 0;
 }
 
 // Function to remove trailing spaces from a string
 void removeTrailingSpaces(char *str) {
-  int length = strlen(str);
   int i;
-
   // Find the index of the last non-space character
-  for (i = length - 1; i >= 0; i--) {
-    if (str[i] != ' ') {
-      break;
-    }
+  for (i = strlen(str) - 1; i >= 0; i--) {
+    if (str[i] != ' ') { break; }
   }
-
-  // Null-terminate the string at the last non-space character
-  str[i + 1] = '\0';
+  str[i + 1] = '\0';  // Null-terminate the string at the last non-space character
 }
 
 // Function to remove spaces from a string
 void removeSpaces(char *str) {
-  int length = strlen(str);
   int i, j = 0;
 
   // Iterate through the string
-  for (i = 0; i < length; i++) {
+  for (i = 0; i < strlen(str); i++) {
     // If the current character is not a space, copy it to the new position
-    if (str[i] != ' ') {
-      str[j++] = str[i];
-    }
+    if (str[i] != ' ') { str[j++] = str[i]; }
   }
-
-  // Null-terminate the string at the new position
-  str[j] = '\0';
+  str[j] = '\0';  // Null-terminate the string at the new position
 }
 
 int searchForParallelCommands(char *readInLine) {
-  int ampersandCount = 0;
-  int commandIndex = 0;
+  int ampersandCount = 0, commandIndex = 0;
   // Look for ampersand
   for (int i = 0; i < strlen(readInLine); i++) {
     if (readInLine[i] == '&') {
-      if (i == 0) {
-        return -1;
-      }
-      else {
-        ampersandCount++;
-      }
+      if (i == 0) { return -1; } // if string starts with ampersand return error code
+      else { ampersandCount++; } // else increment ampersand counter
     }
   }
 
-  // If ampersand found return 1
-  if (ampersandCount == 0) {
-    return 0;
-  }
-  else if (ampersandCount > 0) {
-    return 1;
-  }
+
+  if (ampersandCount == 0) { return 0; }  // return 0 if ampersand is not found
+  else if (ampersandCount > 0) { return 1; } // return 1 if ampersand is found
 }
 
 /**
@@ -116,12 +90,10 @@ int searchForParallelCommands(char *readInLine) {
  * @return int, 0 if no (>) symbol found, -1 if error occurs, else the index of the symbol
  */
 int searchForRedirection(char *readInLine, char **outputString, char **inputString) {
-  removeNewLine(readInLine);  // Remove spaces in line read in
-
   int redirectionIndex = 0, redirectionBoolean = 0, pathIndex = 0, argIndex = 0;
   char *input = malloc(32 * sizeof(char)), *output = malloc(32 * sizeof(char));
-
-  removeTrailingSpaces(readInLine);
+  removeNewLine(readInLine);  // Remove spaces in line read in
+  removeTrailingSpaces(readInLine); // Remove Trailing Spaces
   // Find Redirection Symbol
   for (int i = 0; i <= strlen(readInLine) - 1; i++) {
     if (readInLine[i] == '>') {    // If redirection symbol found set index and set bool value to true
