@@ -1,6 +1,7 @@
 int throwError();
 int searchForRedirection(char* readInLine, char** outputString, char** inputString);
-int runParallelCommands(char* readInLine);
+int searchForParallelCommands(char* readInLine);
+char* removeTrailingSpaces(char* givenString);
 int removeNewLine(char* string);
 char** clearDirectories(char** directory, int amountOfSearchPaths);
 char** parseStringIntoArray(char* givenLine, char** storageArray);

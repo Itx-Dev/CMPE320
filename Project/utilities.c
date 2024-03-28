@@ -13,6 +13,34 @@ int throwError() {
 }
 
 /**
+ * @brief Break given command down into an array of strings and return the array of strings
+ * 
+ * @param givenLine 
+ * @param storageArray 
+ * @return char** Array of Strings with current line
+ */
+char** parseStringIntoArray(char *givenLine, char** storageArray) {
+    char* splitString = malloc(32 * sizeof(char));
+    int argumentIndex = 0;
+
+    // Split String into tokens by spaces
+    splitString = strtok(givenLine, " \t>");
+
+    // Parse string given by user or batch file and split into string array
+    while (splitString != NULL) {
+
+        // Store split string into a string array
+        storageArray[argumentIndex] = splitString;
+
+        // Test for NULL pointer
+        splitString = strtok(NULL, " \t>");
+        argumentIndex++;
+    }
+
+    return storageArray;
+}
+
+/**
  * @brief Remove new line character from string.
  * @param string 
  */
@@ -24,10 +52,25 @@ int removeNewLine(char* string) {
     return 0;
 }
 
-int runParallelCommands(char* readInLine) {
+// Function to remove trailing spaces from a string
+void removeTrailingSpaces(char* str) {
+    int length = strlen(str);
+    int i;
+
+    // Find the index of the last non-space character
+    for (i = length - 1; i >= 0; i--) {
+        if (str[i] != ' ') {
+            break;
+        }
+    }
+
+    // Null-terminate the string at the last non-space character
+    str[i + 1] = '\0';
+}
+
+int searchForParallelCommands(char* readInLine) {
     int ampersandCount = 0;
     int commandIndex = 0;
-
     // Look for ampersand
     for (int i = 0; i < strlen(readInLine); i++) {
         if (readInLine[i] == '&') {
@@ -38,32 +81,13 @@ int runParallelCommands(char* readInLine) {
             }
         }
     }
-    // If no ampersand found return 0
+
+    // If ampersand found return 1
     if (ampersandCount == 0) {
         return 0;
+    } else if (ampersandCount > 0) {
+        return 1;
     }
-
-    // String array to store each command and arguments in
-    char** parallelStringArray = malloc(32 * sizeof(char*));
-
-    // Split line by &
-    if (ampersandCount > 0) {
-        char* parallelCommand = strtok(readInLine, "&");
-        printf("Parallel Command: %s", parallelCommand);
-        while (parallelCommand != NULL) {
-            parallelStringArray[commandIndex] = parallelCommand;
-            commandIndex++;
-            parallelCommand = strtok(NULL, "&");
-        }
-    }
-
-    // Loop 1 more than ampersandCount
-    for (int i = 0; i < ampersandCount + 1; i++) {
-       printf("%s\n", parallelStringArray[i]);
-    } 
-
-    return 0;
-
 }
 
 /**
@@ -83,7 +107,8 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
     int argIndex = 0;
     char* input = malloc(32 * sizeof(char));
     char* output = malloc(32 * sizeof(char));
-
+    
+    removeTrailingSpaces(readInLine);
     // Find Redirection Symbol
     for (int i = 0; i <= strlen(readInLine) - 1; i++) {
         // Update new string with every character after the redirection symbol
@@ -92,6 +117,7 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
         if (readInLine[i] == '>') {
             // Set Index of redirection symbols 
             if (redirectionBoolean == 1) {
+                throwError();
                 return -1;
             }
 
@@ -117,10 +143,12 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
             pathIndex++;
         }
     }
+
     // If > found but no output given throw error 
     if (redirectionBoolean == 1 && strlen(output) == 0) {
         return -1;
     }
+    removeNewLine(input);
 
     // Update string passed in through parameter
     *inputString = input;
@@ -146,33 +174,4 @@ char** clearDirectories(char** directory, int amountOfSearchPaths) {
         directory[i] = NULL;
     }
     return directory;
-}
-
-/**
- * @brief Break given command down into an array of strings and return the array of strings
- * 
- * @param givenLine 
- * @param storageArray 
- * @return char** Array of Strings with current line
- */
-char** parseStringIntoArray(char *givenLine, char** storageArray) {
-    char* splitString = malloc(32 * sizeof(char));
-    int argumentIndex = 0;
-
-    // Split String into tokens by spaces
-    splitString = strtok(givenLine, " \t>");
-    //removeNewLine(splitString);
-
-    // Parse string given by user or batch file and split into string array
-    while (splitString != NULL) {
-
-        // Store split string into a string array
-        storageArray[argumentIndex] = splitString;
-
-        // Test for NULL pointer
-        splitString = strtok(NULL, " \t>");
-        argumentIndex++;
-    }
-
-    return storageArray;
 }
