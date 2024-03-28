@@ -11,247 +11,294 @@
 
 /**
  * @brief Algorithm for any command that is not built into processShell
- * 
- * @param stringArray 
- * @param command 
- * @param mainDirectory 
+ *
+ * @param stringArray
+ * @param command
+ * @param mainDirectory
  */
-void otherCommands(char **stringArray, char *command, char **mainDirectory, int redirectionFlag, char* outputPath)
+void otherCommands(char **stringArray, char *command, char **mainDirectory, int redirectionFlag, char *outputPath)
 {
-    int inputIndex = 0;
-    // Discard output path from string array 
-    while (stringArray[inputIndex] != NULL) {
-        if (strcmp(outputPath, stringArray[inputIndex]) == 0) {
-            stringArray[inputIndex] = NULL;
-        }
-        inputIndex++;
-    }
-
-    int pathIndex = 0;
-    int misses = 0;
-
-    // Redirect output to file defined by user
-    if (redirectionFlag > 0) {
-        int outputFile = open(outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        dup2(outputFile, STDOUT_FILENO);
-        close(outputFile);
-    }
-
-    while (mainDirectory[pathIndex] != NULL)
+  int inputIndex = 0;
+  // Discard output path from string array
+  while (stringArray[inputIndex] != NULL)
+  {
+    if (strcmp(outputPath, stringArray[inputIndex]) == 0)
     {
-        char fullPath[100];
-        snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory[pathIndex], command);
-        // Define arguments
-        // execv should not return if it does, error
-        if (execv(fullPath, stringArray) == -1)
-        {
-            misses++;
-        }
-        pathIndex++;
+      stringArray[inputIndex] = NULL;
     }
-    // If all directories fail throw error
-    if (misses == pathIndex)
+    inputIndex++;
+  }
+
+  int pathIndex = 0;
+  int misses = 0;
+
+  // Redirect output to file defined by user
+  if (redirectionFlag > 0)
+  {
+    int outputFile = open(outputPath, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    dup2(outputFile, STDOUT_FILENO);
+    close(outputFile);
+  }
+
+  while (mainDirectory[pathIndex] != NULL)
+  {
+    char fullPath[100];
+    snprintf(fullPath, sizeof(fullPath), "%s/%s", mainDirectory[pathIndex], command);
+    // Define arguments
+    // execv should not return if it does, error
+    if (execv(fullPath, stringArray) == -1)
     {
-        throwError();
+      misses++;
     }
-    exit(0);
+    pathIndex++;
+  }
+  // If all directories fail throw error
+  if (misses == pathIndex)
+  {
+    throwError();
+  }
+  exit(0);
 }
 
 /**
  * @brief Find how many strings are in a string array
- * 
- * @param stringArray 
- * @return int 
+ *
+ * @param stringArray
+ * @return int
  */
-int findStringArrayLength(char** stringArray) {
-    // Find the length of the string array
-    int stringArrayLength = 0;
-    while (stringArray[stringArrayLength] != NULL) {
-        // Remove new line char from each element of stringArray
-        removeNewLine(stringArray[stringArrayLength]);
-        stringArrayLength++;
-    }
-    return stringArrayLength;
+int findStringArrayLength(char **stringArray)
+{
+  // Find the length of the string array
+  int stringArrayLength = 0;
+  while (stringArray[stringArrayLength] != NULL)
+  {
+    // Remove new line char from each element of stringArray
+    removeNewLine(stringArray[stringArrayLength]);
+    stringArrayLength++;
+  }
+  return stringArrayLength;
 }
 
-int runCommand(char *givenLine, char** mainDirectory) {
-    int searchPathCount = 64;
-    // make a copy of the line
-    char* originalString = malloc(searchPathCount * sizeof(char));
-    strcpy(originalString, givenLine);
-        
-    char* outputPath = malloc(searchPathCount * sizeof(char*));
-    char* inputString = malloc(searchPathCount * sizeof(char*));
-    // Returns index of redirection symbol (>)
-    int redirectionFlag = searchForRedirection(originalString, &outputPath, &inputString);
-    // If redirection returns -1 if error
-    if (redirectionFlag == -1) {
-        throwError();
-        return -1;
+int runCommand(char *givenLine, char **mainDirectory)
+{
+  int searchPathCount = 64;
+  // make a copy of the line
+  char *originalString = malloc(searchPathCount * sizeof(char));
+  strcpy(originalString, givenLine);
+
+  char *outputPath = malloc(searchPathCount * sizeof(char *));
+  char *inputString = malloc(searchPathCount * sizeof(char *));
+  // Returns index of redirection symbol (>)
+  int redirectionFlag = searchForRedirection(originalString, &outputPath, &inputString);
+  // If redirection returns -1 if error
+  if (redirectionFlag == -1)
+  {
+    throwError();
+    return -1;
+  }
+
+  // Parse String into a string array
+  char **stringArray = malloc(searchPathCount * sizeof(char *));
+  stringArray = parseStringIntoArray(originalString, stringArray);
+
+  // Free Memory
+  originalString = NULL;
+  free(originalString);
+
+  // Find number of strings in string array
+  int stringArrayLength = findStringArrayLength(stringArray);
+
+  // Define command
+  char *command = " ";
+  if (stringArray[0] != NULL)
+  {
+    command = stringArray[0];
+  }
+  // if nothing is given try again
+  if (strcmp(command, " ") == 0)
+  {
+    return -1;
+  }
+  // BUILT IN COMMANDS
+
+  // If User decides to Exit
+  if (strcmp(command, "exit") == 0)
+  {
+    // Exit only takes 1 parameter
+    if (stringArrayLength > 1)
+    {
+      throwError();
     }
-
-    // Parse String into a string array
-    char** stringArray = malloc(searchPathCount * sizeof(char*));
-    stringArray = parseStringIntoArray(originalString, stringArray);
-
-    // Free Memory
-    originalString = NULL; free(originalString);
-
-    // Find number of strings in string array
-    int stringArrayLength = findStringArrayLength(stringArray);
-
-    // Define command
-    char* command = " ";
-    if (stringArray[0] != NULL) {
-        command = stringArray[0];
+    else
+    {
+      exit(0);
     }
-    // if nothing is given try again
-    if (strcmp(command, " ") == 0 ) {
-        return -1;
-        }
-    // BUILT IN COMMANDS 
+  }
 
-    // If User decides to Exit
-    if (strcmp(command, "exit") == 0){
-        // Exit only takes 1 parameter
-        if (stringArrayLength > 1) {
-            throwError();
-        } else {
-            exit(0);
-        }
+  // If User decides to CD
+  else if (strcmp(command, "cd") == 0)
+  {
+    if (chdir(stringArray[1]) == 0)
+    {
+      // This should be empty
     }
-
-    // If User decides to CD
-    else if (strcmp(command, "cd") == 0) {
-        if( chdir( stringArray[1] ) == 0 ) {
-            // This should be empty
-        } 
-        // Test for cd error
-        else {
-            throwError();
-        }
+    // Test for cd error
+    else
+    {
+      throwError();
     }
+  }
 
-    // If User decides to PATH
-    else if (strcmp(command, "path") == 0) {
-        mainDirectory = clearDirectories(mainDirectory, searchPathCount);
-        // Loop entire string array and add provided path to search
+  // If User decides to PATH
+  else if (strcmp(command, "path") == 0)
+  {
+    mainDirectory = clearDirectories(mainDirectory, searchPathCount);
+    // Loop entire string array and add provided path to search
 
-        for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++)
+    for (int stringArrayIndex = 1; stringArrayIndex < stringArrayLength; stringArrayIndex++)
+    {
+      for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++)
+      {
+        if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL)
         {
-            for (int directoryIndex = 0; directoryIndex < searchPathCount; directoryIndex++)
-            {
-                if (mainDirectory[directoryIndex] == NULL && stringArray[stringArrayIndex] != NULL)
-                {
-                    mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
-                    break;
-                }
-            }
+          mainDirectory[directoryIndex] = stringArray[stringArrayIndex];
+          break;
         }
-    } 
-
-    // If user types any other command
-    else {
-
-        // Remove spaces in string array
-        for (int i = 0; i < stringArrayLength; i++) {
-            removeTrailingSpaces(stringArray[i]);
-        }
-
-        pid_t pid = fork();
-        if (pid == 0) {
-            otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath);
-        } else {
-            waitpid(pid, NULL, 0);
-        }
+      }
     }
-    // Free Memory
-    for (int i = 0; i < stringArrayLength; i++) {
-        stringArray[i] = NULL; free(stringArray[i]);
+  }
+
+  // If user types any other command
+  else
+  {
+
+    // Remove spaces in string array
+    for (int i = 0; i < stringArrayLength; i++)
+    {
+      removeTrailingSpaces(stringArray[i]);
     }
-    outputPath = NULL; free(outputPath);
-    stringArray = NULL; free(stringArray);
+
+    pid_t pid = fork();
+    if (pid == 0)
+    {
+      otherCommands(stringArray, command, mainDirectory, redirectionFlag, outputPath);
+    }
+    else
+    {
+      waitpid(pid, NULL, 0);
+    }
+  }
+  // Free Memory
+  for (int i = 0; i < stringArrayLength; i++)
+  {
+    stringArray[i] = NULL;
+    free(stringArray[i]);
+  }
+  outputPath = NULL;
+  free(outputPath);
+  stringArray = NULL;
+  free(stringArray);
 }
 
 /**
  * @brief Main shell loop
- * 
- * @param fp 
- * @return int 
+ *
+ * @param fp
+ * @return int
  */
-int processShell(FILE* fp) {
-    int searchPathCount = 64;
-    char* currentLine = NULL;
-    char** mainDirectory = malloc(searchPathCount * sizeof(char*));
-    size_t lineLength = 0;
-    size_t successfulGetLine;
+int processShell(FILE *fp)
+{
+  int searchPathCount = 64;
+  char *currentLine = NULL;
+  char **mainDirectory = malloc(searchPathCount * sizeof(char *));
+  size_t lineLength = 0;
+  size_t successfulGetLine;
 
-    // Reset searchPath so only built-in commands work
-    mainDirectory = clearDirectories(mainDirectory, searchPathCount);
+  // Reset searchPath so only built-in commands work
+  mainDirectory = clearDirectories(mainDirectory, searchPathCount);
 
-    // Set initial path
-    mainDirectory[0] = "/bin";
+  // Set initial path
+  mainDirectory[0] = "/bin";
 
-    while (1) {
-        // Print prompt only if in batch mode
-        if (fp == stdin) {
-            printf("wish> ");
-        }
-
-        // Read in current Line
-        successfulGetLine = getline(&currentLine, &lineLength, fp);
-
-        // Handle Empty Input
-        if (strcmp(currentLine, "\n") == 0) { continue; }
-
-        removeNewLine(currentLine);
-        // If EOF is reached exit
-        if (successfulGetLine == -1) { exit(0); }
-
-        char* copyLine = malloc(searchPathCount * sizeof(char));
-        strcpy(copyLine, currentLine);
-
-        // Test for parallel Commands
-        int parallelCommandsFlag = searchForParallelCommands(currentLine);
-        if (parallelCommandsFlag == -1) { return -1; }
-
-        if (parallelCommandsFlag == 1) { 
-            char** parallelStringArray = malloc(32 * sizeof(char*));
-            int commandIndex = 0;
-            // Split line by &
-            char* parallelCommand = strtok(currentLine, "&");
-            while (parallelCommand != NULL) {
-                parallelStringArray[commandIndex] = parallelCommand;
-                commandIndex++;
-                parallelCommand = strtok(NULL, "&");
-            }
-
-            for (int i = 0; i < commandIndex; i++) {
-                removeTrailingSpaces(parallelStringArray[i]);
-                pid_t pid = fork();
-                if (pid == 0) {
-                    runCommand(parallelStringArray[i], mainDirectory);
-                    exit(0);
-                } else if (pid < 0) {
-                    throwError();
-                    exit(1);
-                }
-            }
-
-            for (int i = 0; i < 3; i++) {
-                wait(NULL);
-            }
-
-        } else {
-            removeTrailingSpaces(copyLine);
-            runCommand(copyLine, mainDirectory);
-        }
+  while (1)
+  {
+    // Print prompt only if in batch mode
+    if (fp == stdin)
+    {
+      printf("wish> ");
     }
 
-    currentLine = NULL;
-    mainDirectory = NULL;
-    free(currentLine);
-    free(mainDirectory);
+    // Read in current Line
+    successfulGetLine = getline(&currentLine, &lineLength, fp);
 
-    return 0;
+    // Handle Empty Input
+    if (strcmp(currentLine, "\n") == 0)
+    {
+      continue;
+    }
+
+    removeNewLine(currentLine);
+    // If EOF is reached exit
+    if (successfulGetLine == -1)
+    {
+      exit(0);
+    }
+
+    char *copyLine = malloc(searchPathCount * sizeof(char));
+    strcpy(copyLine, currentLine);
+
+    // Test for parallel Commands
+    int parallelCommandsFlag = searchForParallelCommands(currentLine);
+    if (parallelCommandsFlag == -1)
+    {
+      return -1;
+    }
+
+    if (parallelCommandsFlag == 1)
+    {
+      char **parallelStringArray = malloc(32 * sizeof(char *));
+      int commandIndex = 0;
+      // Split line by &
+      char *parallelCommand = strtok(currentLine, "&");
+      while (parallelCommand != NULL)
+      {
+        parallelStringArray[commandIndex] = parallelCommand;
+        commandIndex++;
+        parallelCommand = strtok(NULL, "&");
+      }
+
+      for (int i = 0; i < commandIndex; i++)
+      {
+        removeTrailingSpaces(parallelStringArray[i]);
+        pid_t pid = fork();
+        if (pid == 0)
+        {
+          runCommand(parallelStringArray[i], mainDirectory);
+          exit(0);
+        }
+        else if (pid < 0)
+        {
+          throwError();
+          exit(1);
+        }
+      }
+
+      for (int i = 0; i < 3; i++)
+      {
+        wait(NULL);
+      }
+    }
+    else
+    {
+      removeTrailingSpaces(copyLine);
+      runCommand(copyLine, mainDirectory);
+    }
+  }
+
+  currentLine = NULL;
+  mainDirectory = NULL;
+  free(currentLine);
+  free(mainDirectory);
+
+  return 0;
 }
