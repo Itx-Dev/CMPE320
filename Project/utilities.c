@@ -68,6 +68,23 @@ void removeTrailingSpaces(char* str) {
     str[i + 1] = '\0';
 }
 
+// Function to remove spaces from a string
+void removeSpaces(char* str) {
+    int length = strlen(str);
+    int i, j = 0;
+
+    // Iterate through the string
+    for (i = 0; i < length; i++) {
+        // If the current character is not a space, copy it to the new position
+        if (str[i] != ' ') {
+            str[j++] = str[i];
+        }
+    }
+
+    // Null-terminate the string at the new position
+    str[j] = '\0';
+}
+
 int searchForParallelCommands(char* readInLine) {
     int ampersandCount = 0;
     int commandIndex = 0;
@@ -148,7 +165,8 @@ int searchForRedirection(char* readInLine, char** outputString, char** inputStri
     if (redirectionBoolean == 1 && strlen(output) == 0) {
         return -1;
     }
-    removeNewLine(input);
+
+    removeSpaces(output);
 
     // Update string passed in through parameter
     *inputString = input;
