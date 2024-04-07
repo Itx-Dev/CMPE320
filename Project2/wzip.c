@@ -8,61 +8,28 @@ void decimalToBinaryBytes(int decimalValue, unsigned char *bytes) {
     }
 }
 
-void remove_newline(char *givenString) {
-    int len = strlen(givenString);
-    for (int i = 0; i < len; i++) {
-        if (givenString[i] == '\n') {
-            // Shift remaining characters to the left
-            for (int j = i; j < len - 1; j++) {
-                givenString[j] = givenString[j + 1];
-            }
-            givenString[len - 1] = '\0'; // Null-terminate the string
-            len--; // Decrease length of string
-            i--; // Adjust index to recheck current position
-        }
-    }
-}
-
-
-int checkNewLine(char* givenString) {
-    if (givenString[strlen(givenString) - 1] == '\n') {
-        remove_newline(givenString);
-        return 1;
-    } else {
-        return 0;
-    }
-}
-
 void encode(char* givenString) {
     char currentChar;
-    int characterCount, copiedIndex;
-
-    int checkNewLineFlag = checkNewLine(givenString);
+    int characterCount;
         
     int stringLength = strlen(givenString);
 
     for (int i = 0; i < stringLength; i++) {
+        unsigned char bytes[5] = {0};
         characterCount = 1;
         while (i + 1 < stringLength && givenString[i] == givenString[i + 1]) {
             characterCount++;
             i++;
         }
-        copiedIndex = i;
-    }
-    
-    currentChar = givenString[copiedIndex - 1];
 
-    unsigned char bytes[5];
-    decimalToBinaryBytes(characterCount, bytes);
-    bytes[4] = currentChar;
+        currentChar = givenString[i];
 
-    if (checkNewLineFlag == 1) {
-        char newLineArray[] = {1, 0, 0, 0, 10};
-        fwrite(bytes, 1, 5, stdout);
-        fwrite(newLineArray, 1, 5, stdout);
-    } else {
+        decimalToBinaryBytes(characterCount, bytes);
+        bytes[4] = currentChar;
+
         fwrite(bytes, 1, 5, stdout);
     }
+
     
 }
 
@@ -82,15 +49,15 @@ int main(int argc, char* args[])
 
     // If more than 1 file concatenate file's content together
     if (argc > 2) {
-        for (int i = 0; i < argc; i++) {
+        for (int i = 1; i < argc; i++) {
             filename = args[i];
             fp = fopen(filename, "r");
-            if (getline(&currentLine, &lineLength, fp)) {
+            if (getline(&currentLine, &lineLength, fp) != -1) {
                 strcat(concatenatedLine, currentLine);
             }
         }
-
         encode(concatenatedLine);
+        concatenatedLine = NULL; free(concatenatedLine);
         fclose(fp);
     } else {
         // File name is already set from intialization
@@ -101,6 +68,9 @@ int main(int argc, char* args[])
 
         fclose(fp);
     }
+
+    currentLine = NULL; free(currentLine);
+    filename = NULL; free(filename);
 
     return 0;
 }
