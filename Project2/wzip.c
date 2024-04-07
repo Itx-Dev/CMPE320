@@ -2,28 +2,70 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MAXLENGTH 50
- 
-char count[5] = {'0'};
-char* encode(char* givenString)
-{
-    int characterCount;
-    // Find the occurances of a character
-    for (int i = 0; i < strlen(givenString); i++) {
-        // Count occurances of character
+void decimalToBinaryBytes(int decimalValue, unsigned char *bytes) {
+    for (int i = 0; i < 4; i++) {
+        bytes[i] = (decimalValue >> (i * 8)) & 0xFF;  // Convert decimal to binary and store each byte (4 total) in array
+    }
+}
+
+void remove_newline(char *givenString) {
+    int len = strlen(givenString);
+    for (int i = 0; i < len; i++) {
+        if (givenString[i] == '\n') {
+            // Shift remaining characters to the left
+            for (int j = i; j < len - 1; j++) {
+                givenString[j] = givenString[j + 1];
+            }
+            givenString[len - 1] = '\0'; // Null-terminate the string
+            len--; // Decrease length of string
+            i--; // Adjust index to recheck current position
+        }
+    }
+}
+
+
+int checkNewLine(char* givenString) {
+    if (givenString[strlen(givenString) - 1] == '\n') {
+        remove_newline(givenString);
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+void encode(char* givenString) {
+    char currentChar;
+    int characterCount, copiedIndex;
+
+    int checkNewLineFlag = checkNewLine(givenString);
+        
+    int stringLength = strlen(givenString);
+
+    for (int i = 0; i < stringLength; i++) {
         characterCount = 1;
-        while (i + 1 < strlen(givenString) && givenString[i] == givenString[i + 1]) {
-            count[4] = givenString[i];
+        while (i + 1 < stringLength && givenString[i] == givenString[i + 1]) {
             characterCount++;
             i++;
         }
-        // Put each character in count array
-        sprintf(count, "%c", characterCount);
+        copiedIndex = i;
     }
+    
+    currentChar = givenString[copiedIndex - 1];
 
-    return count;
+    unsigned char bytes[5];
+    decimalToBinaryBytes(characterCount, bytes);
+    bytes[4] = currentChar;
+
+    if (checkNewLineFlag == 1) {
+        char newLineArray[] = {1, 0, 0, 0, 10};
+        fwrite(bytes, 1, 5, stdout);
+        fwrite(newLineArray, 1, 5, stdout);
+    } else {
+        fwrite(bytes, 1, 5, stdout);
+    }
+    
 }
- 
+
 int main(int argc, char* args[])
 {
     if (argc < 2) {
@@ -32,41 +74,33 @@ int main(int argc, char* args[])
     }
 
     size_t lineLength = 0;
-    size_t successfulLine;
     FILE *fp;
 
     char* currentLine = NULL;
     char* concatenatedLine = malloc(32 * sizeof(char));
-    // Set first file name
     char* filename = args[1];
 
-    // Encode concatenated Line
+    // If more than 1 file concatenate file's content together
     if (argc > 2) {
-        for (int i = 1; i < argc; i++) {
-            // Change file name for multiple files
+        for (int i = 0; i < argc; i++) {
             filename = args[i];
             fp = fopen(filename, "r");
-            // Get lines
-            successfulLine = getline(&currentLine, &lineLength, fp);
-            if (successfulLine != -1) {
+            if (getline(&currentLine, &lineLength, fp)) {
                 strcat(concatenatedLine, currentLine);
             }
         }
 
-        char* response = encode(concatenatedLine);
-        fwrite(response, 1, 5, stdout);
+        encode(concatenatedLine);
         fclose(fp);
-    } 
-    // Encode if there is only one file
-    else 
-    {
+    } else {
+        // File name is already set from intialization
         fp = fopen(filename, "r");
         while (getline(&currentLine, &lineLength, fp) != -1) {
-            char *response = encode(currentLine);
-            fwrite(response, 1, 5, stdout);
+            encode(currentLine);
         }
+
         fclose(fp);
     }
 
-    return 0;    
+    return 0;
 }
