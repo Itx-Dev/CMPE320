@@ -8,69 +8,59 @@ void decimalToBinaryBytes(int decimalValue, unsigned char *bytes) {
     }
 }
 
-void encode(char* givenString) {
-    char currentChar;
-    int characterCount;
-        
-    int stringLength = strlen(givenString);
-
-    for (int i = 0; i < stringLength; i++) {
-        unsigned char bytes[5] = {0};
-        characterCount = 1;
-        while (i + 1 < stringLength && givenString[i] == givenString[i + 1]) {
-            characterCount++;
-            i++;
-        }
-
-        currentChar = givenString[i];
-
-        decimalToBinaryBytes(characterCount, bytes);
-        bytes[4] = currentChar;
-
-        fwrite(bytes, 1, 5, stdout);
-    }
-
-    
+void writeToOutput(int count, char currentCharacter) {
+    unsigned char bytes[5];
+    bytes[4] = currentCharacter;
+    decimalToBinaryBytes(count, bytes);
+    fwrite(bytes, 1, 5, stdout);
 }
 
-int main(int argc, char* args[])
-{
-    if (argc < 2) {
+void encodeRLE(FILE *inputFile) {
+    char currentChar, nextChar;
+    int count = 1;
+    currentChar = getc(inputFile);  // Read first character
+    // Loop through the file until EOF is reached
+    while (currentChar != EOF) {
+        nextChar = getc(inputFile); // Read Next Character
+        if (nextChar == currentChar) {
+            count++;
+        } else {
+            writeToOutput(count, currentChar); // Write Binary Output
+            count = 1;  // Reset count for new character
+        }
+        currentChar = nextChar;  // Move to next character
+    }
+}
+
+int main(int argc, char* args[]) {
+    FILE* inputFile;
+    
+    if (argc == 1) {
         printf("wzip: file1 [file2 ...]\n");
         return 1;
     }
 
-    size_t lineLength = 0;
-    FILE *fp;
-
-    char* currentLine = NULL;
-    char* concatenatedLine = malloc(32 * sizeof(char));
-    char* filename = args[1];
-
     // If more than 1 file concatenate file's content together
     if (argc > 2) {
-        for (int i = 1; i < argc; i++) {
-            filename = args[i];
-            fp = fopen(filename, "r");
-            if (getline(&currentLine, &lineLength, fp) != -1) {
-                strcat(concatenatedLine, currentLine);
+        FILE *tempFile = tmpfile();
+        // Open each file path supplied and concatenate the contents to a temp file
+        for (int file = 1; file < argc; file++) {
+            inputFile = fopen(args[file], "rb"); 
+            int inputCharacter;
+            while ((inputCharacter = fgetc(inputFile)) != EOF) {
+                fputc(inputCharacter, tempFile);  // Put each character in temp file
             }
         }
-        encode(concatenatedLine);
-        concatenatedLine = NULL; free(concatenatedLine);
-        fclose(fp);
-    } else {
-        // File name is already set from intialization
-        fp = fopen(filename, "r");
-        while (getline(&currentLine, &lineLength, fp) != -1) {
-            encode(currentLine);
-        }
+        
+        rewind(tempFile);  // Put cursor at beginning of temp file
 
-        fclose(fp);
+        encodeRLE(tempFile);  // Encode with combied file content
+        fclose(tempFile);  // Close temp file which deletes it
+    } else {
+        inputFile = fopen(args[1], "rb");
+        encodeRLE(inputFile);   
     }
 
-    currentLine = NULL; free(currentLine);
-    filename = NULL; free(filename);
-
+    fclose(inputFile); // Close file
     return 0;
 }
