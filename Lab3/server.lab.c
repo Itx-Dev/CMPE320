@@ -9,6 +9,27 @@
 #define BUFSIZE 64
 #define PENDING 16
 
+char candidates[BUFSIZE];
+char candidatesVotes[BUFSIZE];
+
+void checkVotes(char bufferCharacter) {
+    int characterFound = 0, i = 0;
+    while (candidates[i] != 0 && characterFound == 0) {
+        if (candidates[i] == bufferCharacter) {
+            candidatesVotes[i]++;
+            characterFound = 1;
+        }
+        i++;
+    }
+
+    if (characterFound == 0) {
+        candidates[i] = bufferCharacter;
+        candidatesVotes[i]++;
+    }
+
+}
+
+
 void die(char *msg) {
     fprintf(stderr, "DEAD: %s\n", msg);
     exit(1);
@@ -32,11 +53,14 @@ void handle(int sock) {
             die("recv() failed");
         }
     }
+
+    
+    checkVotes(buffer[0]);
+    
     close(sock);
 }
 
 int main(int argc, char* argv[]) {
-
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <port num>", argv[0]);
         exit(1);
@@ -72,7 +96,12 @@ int main(int argc, char* argv[]) {
         if ((client_sock = accept(sock, (struct sockaddr *) &client_addr, &client_len)) < 0) {
             die("accept() failed");
         }
+
         printf("Handling client: %s\n", inet_ntoa(client_addr.sin_addr));
         handle(client_sock);
+
+        for (int i = 0; candidates[i] != 0; i++) {
+            printf("%c: %d\n", candidates[i], candidatesVotes[i]);
+        }
     }
 }
