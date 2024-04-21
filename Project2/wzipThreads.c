@@ -157,23 +157,17 @@ int getFileSize(FILE *file)
 int defineChunks(char *input, char *chunkNum, int chunkStartingIndex)
 {
   int length = strlen(input);
-  int currentIndex = 0, done = 0;
+  int currentIndex = 0;
   char previousChar;
   char currentChar = input[chunkStartingIndex];
 
-  while (done == 0)
+  while (1)
   {
     currentChar = input[chunkStartingIndex + currentIndex];
 
-    if (currentIndex >= length / 3 && currentChar != previousChar)
+    if ((currentIndex >= length / 3 && currentChar != previousChar) ||
+        chunkStartingIndex + currentIndex >= length)
     {
-      done = 1;
-      break;
-    }
-
-    if (chunkStartingIndex + currentIndex >= length)
-    {
-      done = 1;
       break;
     }
 
@@ -183,7 +177,6 @@ int defineChunks(char *input, char *chunkNum, int chunkStartingIndex)
 
     currentIndex++;
   }
-  chunkNum[chunkStartingIndex + currentIndex] = '\0';
   return (chunkStartingIndex + currentIndex); // Ending index
 }
 
@@ -221,6 +214,8 @@ void threadDecode(FILE *inputFile, int fileSize)
     pthread_join(threads[waitingThread], NULL);
     writeThreadOutput(threadParameter[waitingThread].ret_val.encodedString);
   }
+
+  free(chunk1); free(chunk2); free(chunk3);
 }
 
 /// @brief Loop files given through args, test size, and encode accordingly
@@ -250,10 +245,11 @@ void loopFiles(int argNum, char *arguments[])
       if (argIndex == argNum - 1)
       { // If at end of files under 4096 bytes
         rewind(tempFile);  // Put cursor at beginning of temp file
-            encodeRLE(tempFile); // Encode with combied file content
+        encodeRLE(tempFile); // Encode with combied file content
       }
     }
   }
+  fclose(inputFile);
   fclose(tempFile); // Close and delete file
 }
 
@@ -278,6 +274,7 @@ int main(int argc, char *args[])
     FILE *inputFile;
     inputFile = fopen(args[1], "rb");
     encodeRLE(inputFile); // Single Thread Encoding
+    fclose(inputFile);
   }
   return 0;
 }
