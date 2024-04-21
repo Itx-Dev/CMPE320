@@ -134,6 +134,7 @@ void *threadFunction(void *arg)
                                     // Get arguments from passed in parameter
   char *stringChunk = argStructs->arg_val.stringChunk;
   argStructs->ret_val.encodedString = encodeThreadsRLE(stringChunk);
+  free(stringChunk);
   return NULL;
 }
 
@@ -199,6 +200,8 @@ void threadDecode(FILE *inputFile, int fileSize)
   int chunk3StartingIndex = defineChunks(string, chunk2, chunk2StartingIndex);
   defineChunks(string, chunk3, chunk3StartingIndex);
 
+  munmap(string, fileSize); // Deallocate memory from mmap
+
   pthread_t threads[THREADCOUNT];
   arg_t threadParameter[THREADCOUNT];
 
@@ -213,9 +216,9 @@ void threadDecode(FILE *inputFile, int fileSize)
   {
     pthread_join(threads[waitingThread], NULL);
     writeThreadOutput(threadParameter[waitingThread].ret_val.encodedString);
+    threadParameter[waitingThread].ret_val.encodedString = NULL; free(threadParameter[waitingThread].ret_val.encodedString);  // Free Malloc'd encodedString
+    chunkArray[waitingThread] = NULL; free(chunkArray[waitingThread]); // Free Malloc'd Chunks
   }
-
-  free(chunk1); free(chunk2); free(chunk3);
 }
 
 /// @brief Loop files given through args, test size, and encode accordingly
@@ -225,7 +228,8 @@ void threadDecode(FILE *inputFile, int fileSize)
 void loopFiles(int argNum, char *arguments[])
 {
   FILE *inputFile;
-  FILE *tempFile = tmpfile(); // Create temp file for single thread file concatenation
+  char *concatenatedString = (char *)malloc(1024 * sizeof(char));
+  size_t index = 0;
   for (int argIndex = 1; argIndex < argNum; argIndex++)
   {
     inputFile = fopen(arguments[argIndex], "rb"); // Open File
@@ -239,18 +243,21 @@ void loopFiles(int argNum, char *arguments[])
       int inputCharacter;
       while ((inputCharacter = fgetc(inputFile)) != EOF)
       {
-        fputc(inputCharacter, tempFile); // Put each character in temp file
+        concatenatedString[index] = inputCharacter;
+        index++;
       }
 
       if (argIndex == argNum - 1)
       { // If at end of files under 4096 bytes
-        rewind(tempFile);  // Put cursor at beginning of temp file
-        encodeRLE(tempFile); // Encode with combied file content
+        concatenatedString[index] = '\0';
+        char* encodedString = encodeThreadsRLE(concatenatedString);
+        writeThreadOutput(encodedString); // Encode with combied file content
+        encodedString = NULL; free(encodedString);
+        concatenatedString = NULL; free(concatenatedString);
       }
     }
+    fclose(inputFile);
   }
-  fclose(inputFile);
-  fclose(tempFile); // Close and delete file
 }
 
 /// @brief Main Function
