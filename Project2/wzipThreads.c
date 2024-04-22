@@ -92,6 +92,7 @@ void writeThreadOutput(char *rleString)
     // Move to the next count or character
     i++;
   }
+  free(rleString);
 }
 
 /// @brief RLE encoding for multithreading
@@ -99,11 +100,12 @@ void writeThreadOutput(char *rleString)
 /// @return string logically encoded ex. "4a5b8c"
 char *encodeThreadsRLE(char *inputString)
 {
-  char currentChar, nextChar;
+  char currentChar = '0', nextChar = '0';
   int count = 1, outputIndex = 0;
   currentChar = inputString[0]; // Read first character
-
-  char *encodedOutput = (char *)malloc((2 * strlen(inputString) + 1) * sizeof(char));
+  int stringLength = 0;
+  stringLength = strlen(inputString);
+  char *encodedOutput = (char *)calloc((2 * stringLength + 1), sizeof(char));
 
   // Loop through the string until the null terminator is reached
   for (int i = 1; inputString[i] != '\0'; i++)
@@ -178,6 +180,7 @@ int defineChunks(char *input, char *chunkNum, int chunkStartingIndex)
 
     currentIndex++;
   }
+  chunkNum[currentIndex] = '\0';
   return (chunkStartingIndex + currentIndex); // Ending index
 }
 
@@ -216,9 +219,9 @@ void threadDecode(FILE *inputFile, int fileSize)
   {
     pthread_join(threads[waitingThread], NULL);
     writeThreadOutput(threadParameter[waitingThread].ret_val.encodedString);
-    threadParameter[waitingThread].ret_val.encodedString = NULL; free(threadParameter[waitingThread].ret_val.encodedString);  // Free Malloc'd encodedString
-    chunkArray[waitingThread] = NULL; free(chunkArray[waitingThread]); // Free Malloc'd Chunks
   }
+
+
 }
 
 /// @brief Loop files given through args, test size, and encode accordingly
@@ -228,18 +231,21 @@ void threadDecode(FILE *inputFile, int fileSize)
 void loopFiles(int argNum, char *arguments[])
 {
   FILE *inputFile;
-  char *concatenatedString = (char *)malloc(1024 * sizeof(char));
-  size_t index = 0;
+  char *concatenatedString = NULL;
+  int index = 0, totalSize = 0;
   for (int argIndex = 1; argIndex < argNum; argIndex++)
   {
     inputFile = fopen(arguments[argIndex], "rb"); // Open File
     int fileSize = getFileSize(inputFile);        // Get file Size
-    if (fileSize >= 4096)
+    totalSize += fileSize;
+    if (fileSize > 4096)
     {                                    // Use threads if size is greater than 4096 bytes
       threadDecode(inputFile, fileSize); // Decode with threads
+      fclose(inputFile);
     }
     else
     { // File under 4096 bytes
+      concatenatedString = realloc(concatenatedString, totalSize + 1);
       int inputCharacter;
       while ((inputCharacter = fgetc(inputFile)) != EOF)
       {
@@ -250,13 +256,14 @@ void loopFiles(int argNum, char *arguments[])
       if (argIndex == argNum - 1)
       { // If at end of files under 4096 bytes
         concatenatedString[index] = '\0';
+
         char* encodedString = encodeThreadsRLE(concatenatedString);
         writeThreadOutput(encodedString); // Encode with combied file content
         encodedString = NULL; free(encodedString);
-        concatenatedString = NULL; free(concatenatedString);
+        free(concatenatedString);
       }
+      fclose(inputFile);
     }
-    fclose(inputFile);
   }
 }
 
@@ -272,7 +279,7 @@ int main(int argc, char *args[])
     return 1;
   }
 
-  if (argc > 2)
+  if (argc > 1)
   { // Check multiple files
     loopFiles(argc, args);
   }
