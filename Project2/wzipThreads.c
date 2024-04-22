@@ -12,57 +12,13 @@
 /// @brief Strut to define parameters and return values for threads
 typedef struct
 {
-  struct arg_val_t
-  {
-    char *stringChunk;
-  } arg_val;
-  struct ret_val_t
-  {
-    char *encodedString;
-  } ret_val;
+  char *stringChunk;
+  char *encodedString;
 } arg_t;
-
-/// @brief Write to output when Single Threading was used
-/// @param count
-/// @param currentCharacter
-void writeToOutput(int count, char currentCharacter)
-{
-  unsigned char bytes[5];
-  bytes[4] = currentCharacter;
-  for (int i = 0; i < 4; i++)
-  {
-    bytes[i] = (count >> (i * 8)) & 0xFF; // Convert decimal to binary and store each byte (4 total) in array
-  }
-  fwrite(bytes, 1, 5, stdout);
-}
-
-/// @brief RLE Encoding for single threading
-/// @param inputFile
-void encodeRLE(FILE *inputFile)
-{
-  char currentChar, nextChar;
-  int count = 1;
-  currentChar = getc(inputFile); // Read first character
-  // Loop through the file until EOF is reached
-  while (currentChar != EOF)
-  {
-    nextChar = getc(inputFile); // Read Next Character
-    if (nextChar == currentChar)
-    {
-      count++;
-    }
-    else
-    {
-      writeToOutput(count, currentChar); // Write Binary Output
-      count = 1;                         // Reset count for new character
-    }
-    currentChar = nextChar; // Move to next character
-  }
-}
 
 /// @brief Write to output when multi-threading was used.
 /// @param rleString
-void writeThreadOutput(char *rleString)
+void writeOutput(char *rleString)
 {
   unsigned char bytes[5];
 
@@ -87,6 +43,7 @@ void writeThreadOutput(char *rleString)
     {
       bytes[j] = (count >> (j * 8)) & 0xFF;
     }
+
     fwrite(bytes, 1, 5, stdout);
 
     // Move to the next count or character
@@ -98,14 +55,14 @@ void writeThreadOutput(char *rleString)
 /// @brief RLE encoding for multithreading
 /// @param inputString
 /// @return string logically encoded ex. "4a5b8c"
-char *encodeThreadsRLE(char *inputString)
+char *encodeRLE(char *inputString)
 {
   char currentChar = '0', nextChar = '0';
   int count = 1, outputIndex = 0;
   currentChar = inputString[0]; // Read first character
   int stringLength = 0;
   stringLength = strlen(inputString);
-  char *encodedOutput = (char *)calloc((2 * stringLength + 1), sizeof(char));
+  char *encodedOutput = (char *)malloc((2 * stringLength + 1)* sizeof(char));
 
   // Loop through the string until the null terminator is reached
   for (int i = 1; inputString[i] != '\0'; i++)
@@ -124,6 +81,7 @@ char *encodeThreadsRLE(char *inputString)
   }
   outputIndex += sprintf(encodedOutput + outputIndex, "%d%c", count, currentChar);
   encodedOutput[outputIndex] = '\0';
+
   return encodedOutput;
 }
 
@@ -133,10 +91,9 @@ char *encodeThreadsRLE(char *inputString)
 void *threadFunction(void *arg)
 {
   arg_t *argStructs = (arg_t *)arg; // Take in thread structure
-                                    // Get arguments from passed in parameter
-  char *stringChunk = argStructs->arg_val.stringChunk;
-  argStructs->ret_val.encodedString = encodeThreadsRLE(stringChunk);
-  free(stringChunk);
+  char* stringChunk = argStructs->stringChunk; // Get arguments from passed in parameter
+  char* encodedString = encodeRLE(stringChunk);
+  argStructs->encodedString = encodedString;
   return NULL;
 }
 
@@ -161,27 +118,21 @@ int defineChunks(char *input, char *chunkNum, int chunkStartingIndex)
 {
   int length = strlen(input);
   int currentIndex = 0;
-  char previousChar;
-  char currentChar = input[chunkStartingIndex];
+  char previousChar, currentChar;
 
   while (1)
   {
     currentChar = input[chunkStartingIndex + currentIndex];
-
     if ((currentIndex >= length / 3 && currentChar != previousChar) ||
         chunkStartingIndex + currentIndex >= length)
-    {
-      break;
+    {  
+      chunkNum[currentIndex] = '\0';
+      return (chunkStartingIndex + currentIndex); // Ending index
     }
-
     chunkNum[currentIndex] = currentChar;
-
     previousChar = currentChar;
-
     currentIndex++;
   }
-  chunkNum[currentIndex] = '\0';
-  return (chunkStartingIndex + currentIndex); // Ending index
 }
 
 /// @brief Decode file with threads
@@ -193,9 +144,11 @@ void threadDecode(FILE *inputFile, int fileSize)
   int stringLength = strlen(string);
   int sectionLength = stringLength / 3;
 
-  char *chunk1 = malloc(stringLength * sizeof(char));
-  char *chunk2 = malloc(stringLength * sizeof(char));
-  char *chunk3 = malloc(stringLength * sizeof(char));
+  // Allocate memory for chunks
+  char *chunkMemory = malloc(3 * stringLength * sizeof(char));
+  char *chunk1 = chunkMemory;
+  char* chunk2 = chunkMemory + stringLength;
+  char *chunk3 = chunkMemory + (stringLength * 2);
 
   char *chunkArray[3] = {chunk1, chunk2, chunk3};
 
@@ -211,17 +164,16 @@ void threadDecode(FILE *inputFile, int fileSize)
   // Create threads, each responsible for processing a section of the string
   for (int threadNum = 0; threadNum < THREADCOUNT; threadNum++)
   {
-    threadParameter[threadNum].arg_val.stringChunk = chunkArray[threadNum];
+    threadParameter[threadNum].stringChunk = chunkArray[threadNum];
     pthread_create(&threads[threadNum], NULL, threadFunction, (void *)&threadParameter[threadNum]);
   }
   // Wait for all threads to complete
   for (int waitingThread = 0; waitingThread < THREADCOUNT; waitingThread++)
   {
     pthread_join(threads[waitingThread], NULL);
-    writeThreadOutput(threadParameter[waitingThread].ret_val.encodedString);
+    writeOutput(threadParameter[waitingThread].encodedString);
   }
-
-
+  free(chunkMemory);
 }
 
 /// @brief Loop files given through args, test size, and encode accordingly
@@ -246,6 +198,7 @@ void loopFiles(int argNum, char *arguments[])
     else
     { // File under 4096 bytes
       concatenatedString = realloc(concatenatedString, totalSize + 1);
+
       int inputCharacter;
       while ((inputCharacter = fgetc(inputFile)) != EOF)
       {
@@ -257,9 +210,7 @@ void loopFiles(int argNum, char *arguments[])
       { // If at end of files under 4096 bytes
         concatenatedString[index] = '\0';
 
-        char* encodedString = encodeThreadsRLE(concatenatedString);
-        writeThreadOutput(encodedString); // Encode with combied file content
-        encodedString = NULL; free(encodedString);
+        writeOutput(encodeRLE(concatenatedString));
         free(concatenatedString);
       }
       fclose(inputFile);
@@ -282,13 +233,6 @@ int main(int argc, char *args[])
   if (argc > 1)
   { // Check multiple files
     loopFiles(argc, args);
-  }
-  else
-  { // Encode Single File
-    FILE *inputFile;
-    inputFile = fopen(args[1], "rb");
-    encodeRLE(inputFile); // Single Thread Encoding
-    fclose(inputFile);
   }
   return 0;
 }
