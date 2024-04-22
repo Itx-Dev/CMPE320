@@ -60,15 +60,13 @@ char *encodeRLE(char *inputString)
   char currentChar = '0', nextChar = '0';
   int count = 1, outputIndex = 0;
   currentChar = inputString[0]; // Read first character
-  int stringLength = 0;
-  stringLength = strlen(inputString);
+  int stringLength = strlen(inputString);
   char *encodedOutput = (char *)malloc((2 * stringLength + 1)* sizeof(char));
 
   // Loop through the string until the null terminator is reached
   for (int i = 1; inputString[i] != '\0'; i++)
   {
-    nextChar = inputString[i]; // Read next character
-    if (nextChar == currentChar)
+    if (inputString[i] == currentChar)
     {
       count++;
     }
@@ -77,7 +75,7 @@ char *encodeRLE(char *inputString)
       outputIndex += sprintf(encodedOutput + outputIndex, "%d%c", count, currentChar);
       count = 1; // Reset count for new character
     }
-    currentChar = nextChar; // Move to next character
+    currentChar = inputString[i]; // Move to next character
   }
   outputIndex += sprintf(encodedOutput + outputIndex, "%d%c", count, currentChar);
   encodedOutput[outputIndex] = '\0';
@@ -91,8 +89,7 @@ char *encodeRLE(char *inputString)
 void *threadFunction(void *arg)
 {
   arg_t *argStructs = (arg_t *)arg; // Take in thread structure
-  char* stringChunk = argStructs->stringChunk; // Get arguments from passed in parameter
-  char* encodedString = encodeRLE(stringChunk);
+  char* encodedString = encodeRLE(argStructs->stringChunk);
   argStructs->encodedString = encodedString;
   return NULL;
 }
