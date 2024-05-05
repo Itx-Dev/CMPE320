@@ -25,36 +25,36 @@ int main(int argc, char *argv[]) {
 	int buffer = 1;
 	char* schedalg = "FIFO"; 
     
-    while ((c = getopt(argc, argv, "d:p:t:b:s")) != -1)
-		switch (c) {
-			case 'd':
-				root_dir = optarg;
-				break;
-			case 'p':
-				port = atoi(optarg);
-				break;
-			case 't':
-				threadNum = atoi(optarg);
-				if (threadNum <= 0) {
-					exit(-1);
-				}
-				break;
-			case 'b':
-				buffer = atoi(optarg);
-				if (buffer <= 0) {
-					exit(-1);
-				}
-				break;
-			case 's':
-				if (strcmp("FIFO", optarg) == 0) { schedalg = "FIFO"; }
-				else if (strcmp("SFF", optarg) == 0) { schedalg = "SFF"; }
-				else { exit(-1); }
-				break;
-			
-			default:
-				fprintf(stderr, "usage: wserver [-d basedir] [-p port] [-t threads] [-b buffer] [-s scheduling algorithm\n");
-				exit(1);
+  while ((c = getopt(argc, argv, "d:p:t:b:s")) != -1)
+	switch (c) {
+		case 'd':
+			root_dir = optarg;
+			break;
+		case 'p':
+			port = atoi(optarg);
+			break;
+		case 't':
+			threadNum = atoi(optarg);
+			if (threadNum <= 0) {
+				exit(-1);
 			}
+			break;
+		case 'b':
+			buffer = atoi(optarg);
+			if (buffer <= 0) {
+				exit(-1);
+			}
+			break;
+		case 's':
+			if (strcmp("FIFO", optarg) == 0) { schedalg = "FIFO"; }
+			else if (strcmp("SFF", optarg) == 0) { schedalg = "SFF"; }
+			else { exit(-1); }
+			break;
+			
+		default:
+			fprintf(stderr, "usage: wserver [-d basedir] [-p port] [-t threads] [-b buffer] [-s scheduling algorithm\n");
+			exit(1);
+	}
 			
  	printf("Thread Number: %d\nBuffer Number: %d\nScheduling Algorithm: %s\n", threadNum, buffer, schedalg);   
 
